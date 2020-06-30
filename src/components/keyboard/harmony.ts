@@ -48,7 +48,7 @@ const chords = [
     },
     {
         notes: new Set([0, 5, 7, 10]),
-        name: "7suss4"
+        name: "7sus4"
     },
     {
         notes: new Set([0, 3, 7, 11]),
@@ -114,13 +114,16 @@ export function chordCheck(playingMidiNoteNumbers: number[]) {
             distances.add(toneDistance(toneNumbersInC[0], toneNumbersInC[j]))
         }
         const matchChords = chords.filter((chord) => isSuperset(distances, chord.notes))
+        const subResult = []
         for (const matchChord of matchChords) {
-            result.push({
+            subResult.push({
                 scaleName: noteNames[toneNumbersInC[0]],
                 chordName: matchChord.name,
                 isMajor: !distances.has(3)
             });
         }
+        subResult.reverse()
+        result.push(...subResult)
         toneNumbersInC.push(toneNumbersInC[0])
         toneNumbersInC.shift()
     }

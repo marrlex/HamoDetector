@@ -62,14 +62,14 @@ export default {
 }
 .white-key {
   box-sizing: border-box;
-  height: 150px;
+  height: 100%;
   border: solid 1px black;
   background-color: white;
   border-bottom: solid 4px #eee;
 }
 .black-key {
   box-sizing: border-box;
-  height: 70px;
+  height: 50%;
   border: solid 1px black;
   background-color: black;
   border-bottom: solid 4px #333;

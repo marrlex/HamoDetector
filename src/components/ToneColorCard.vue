@@ -55,7 +55,7 @@
         ></v-divider>
       </v-col>
       <v-col cols=8>
-        <v-chip-group mandatory="" v-model="sustainMethods.value">
+        <v-chip-group mandatory="" :value="sustainMethod" >
         <v-chip
             v-for="(text, key) in sustainMethods.items"
             :key="key"

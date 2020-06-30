@@ -102,12 +102,26 @@ export default Vue.extend({
     clear () {
       const pressedIndexes = [...this.isPressedIndexes]
       for (const midiNoteNumber of pressedIndexes) {
-        console.log(midiNoteNumber)
         this.stop(midiNoteNumber)
       }
-      this.audioNodes.forEach(function(audioNode) {
-        (audioNode.osc as OscillatorNode).stop()
-      })
+      this.audioCtx.close()
+    },
+    replay () {
+      const pressedIndexes = [...this.isPressedIndexes]
+      for (const midiNoteNumber of pressedIndexes) {
+        const freq = getFreqByMidiNoteNumber({
+          midiNoteNumber,
+          isMajor: this.isMajor,
+          scaleKeyNumber: toneNames.indexOf(this.musicalKey),
+          stdFreq: this.stdFrequency
+        })
+        const audioNode = this.audioNodes.get(midiNoteNumber);
+        if (audioNode != undefined) {
+          const osc = (audioNode.osc as OscillatorNode)
+          osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime)
+          osc.type = this.wavetype as OscillatorType
+        }
+      }
     },
     pressKey (event: MouseEvent | TouchEvent) {
       const targetElement = event.target as HTMLDivElement
@@ -213,6 +227,18 @@ export default Vue.extend({
   watch: {
     sustainMethod: function() {
       if (this.sustainMethod === "momentary") this.clear()
+    },
+    musicalKey: function () {
+      this.replay()
+    },
+    isMajor: function () {
+      this.replay()
+    },
+    wavetype: function () {
+      this.replay()
+    },
+    stdFrequency: function () {
+      this.replay()
     }
   }
 })

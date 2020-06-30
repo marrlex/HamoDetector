@@ -2,34 +2,33 @@
   <v-app>
     <v-app-bar
       dense=""
-      :dark="items.general.items.colorTheme.value"
+      :dark="settings.general.items.colorTheme.value"
       app
-      fixed=""
       width="100vw"
     >
       <v-toolbar-title>鱧ディテクター</v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-btn :dark="items.general.items.colorTheme.value" icon @click.stop="drawer = !drawer">
+      <v-btn :dark="settings.general.items.colorTheme.value" icon @click.stop="drawer = !drawer">
         <v-icon>settings</v-icon>
       </v-btn>
     </v-app-bar>
+
     <v-navigation-drawer
       v-model="drawer"
-      absolute
       temporary
       right
       app
-      :dark="items.general.items.colorTheme.value"
+      :dark="settings.general.items.colorTheme.value"
     >
-      <v-list-item :dark="items.general.items.colorTheme.value">
+      <v-list-item :dark="settings.general.items.colorTheme.value">
         <v-list-item-content>
-          <v-list-item-title class="text-subtitle-1">{{ title }}</v-list-item-title>
+          <v-list-item-title class="text-subtitle-1">設定</v-list-item-title>
         </v-list-item-content>
       </v-list-item>
 
-      <v-list dense :dark="items.general.items.colorTheme.value">
+      <v-list dense :dark="settings.general.items.colorTheme.value">
         <v-list-group
-          v-for="item in items"
+          v-for="item in settings"
           :key="item.title"
           v-model="item.active"
           :prepend-icon="item.action"
@@ -85,12 +84,12 @@
     </v-navigation-drawer>
 
     <v-main style="height: 100vh">
-      <v-container fluid style="height: 100%">
-        <v-row wrap dense style="height: 100%" class="overflow-y-auto">
+      <v-container fluid style="height: 100%" class="overflow-y-auto">
+        <v-row wrap dense>
           <v-col cols="12" md="12" lg="6" order-lg="4" order-xl="4" order-sm="first" order-md="first" :style="`width: ${$vuetify.breakpoint.thresholds.md}`">
             <harmony-display
               style="max-height: 100%"
-              :dark="items.general.items.colorTheme.value"
+              :dark="settings.general.items.colorTheme.value"
               :matchChords="harmony"
             ></harmony-display>
           </v-col>
@@ -98,7 +97,7 @@
           <v-col cols="12" md="6" lg="3" order-lg="first" order-xl="first" order-sm="7" order-md="7" :style="`width: ${$vuetify.breakpoint.thresholds.md}`">
             <tonecolor-card
               style="max-height: 100%"
-              :dark="items.general.items.colorTheme.value"
+              :dark="settings.general.items.colorTheme.value"
               :waveform.sync="toneConfig.waveform"
               :sustainMethod.sync="toneConfig.sustainMethod"
               :toneRange.sync="toneConfig.toneRange"
@@ -110,28 +109,31 @@
 
           <v-col cols="12" md="6" lg="3" order="last" :style="`width: ${$vuetify.breakpoint.thresholds.md}`">
             <metronome-card
-              :dark="items.general.items.colorTheme.value"
+              :dark="settings.general.items.colorTheme.value"
               style="max-height: 100%"
-              :values="items.metronome"
             ></metronome-card>
           </v-col>
         </v-row>
       </v-container>
     </v-main>
 
-    <v-footer max-height="40%" width="100vw" padless="" fixed="">
-      <v-container fluid class="ma-0" style="width: 100vw">
+    <v-footer
+      style="height: 40%; max-height: 50mm"
+      padless=""
+      app
+    >
+      <v-container fluid class="ma-0" style="height: 100%; width: 100vw">
         <piano-keyboard
           :startMidiNoteNumber="toneConfig.toneRange * 12 + 24"
-          :interval="$vuetify.breakpoint.mdAndUp ? 49 : 25"
+          :interval="$vuetify.breakpoint.xs ? 13 : $vuetify.breakpoint.mdAndDown ? 25 : $vuetify.breakpoint.lg ? 37 : 49"
           :isPressedIndexes="playingMidiNoteNumbers"
           :sustainMethod="toneConfig.sustainMethod"
           :wavetype="toneConfig.waveform"
-          :attackTimeConst="items.toneColor.items.attack.value"
-          :releaseTimeConst="items.toneColor.items.release.value"
+          :attackTimeConst="settings.toneColor.items.attack.value"
+          :releaseTimeConst="settings.toneColor.items.release.value"
           :isMajor="toneConfig.isMajor"
           :musicalKey="toneConfig.musicalKey"
-          :stdFrequency="items.general.items.baseFrequency.value"
+          :stdFrequency="settings.general.items.baseFrequency.value"
         ></piano-keyboard>
       </v-container>
     </v-footer>
@@ -149,6 +151,15 @@ import ToneColorCard from './components/ToneColorCard.vue'
 import HarmonyDisplay from './components/HarmonyDisplay.vue'
 import { chordCheck } from './components/keyboard/harmony'
 
+function storeData (key: string, data: Record<string, any>) {
+  window.localStorage.setItem(key, JSON.stringify(data))
+}
+
+const storedSettings = JSON.parse(window.localStorage.getItem("settings") as string)
+const storedToneConfig = JSON.parse(window.localStorage.getItem("toneConfig") as string)
+
+const storedGeneralSettings = storedSettings?.general?.items
+
 export default Vue.extend({
   name: 'App',
 
@@ -161,19 +172,19 @@ export default Vue.extend({
 
   data: () => ({
     drawer: null,
-    items: {
+    settings: {
       general: {
         title: '一般',
         active: false,
         items: {
           autoKeySelect: {
             title: '調の自動選択',
-            value: true,
+            value: storedGeneralSettings?.autoKeySelect?.value || true,
             switch: true
           },
           baseFrequency: {
             title: '基本周波数',
-            value: 442,
+            value: storedGeneralSettings?.baseFrequency?.value || 442,
             slider: {
               min: 435,
               max: 445
@@ -182,7 +193,7 @@ export default Vue.extend({
           /*
           keyboardSize: {
             title: 'キーボードサイズ',
-            value: 50,
+            value: storedGeneralSettings.keyboardSize.value || 50,
             slider: {
               min: 1,
               max: 100
@@ -191,7 +202,7 @@ export default Vue.extend({
           */
           colorTheme: {
             title: 'ダークモード',
-            value: false,
+            value: storedGeneralSettings?.colorTheme?.value || false,
             switch: true
             /*
             select: [
@@ -209,7 +220,7 @@ export default Vue.extend({
         items: {
           attack: {
             title: 'アタック',
-            value: 80,
+            value: storedSettings?.ToneColor?.items?.attack?.value || 80,
             slider: {
               min: 0,
               max: 100
@@ -217,7 +228,7 @@ export default Vue.extend({
           },
           release: {
             title: 'リリース',
-            value: 80,
+            value: storedSettings?.ToneColor?.items?.release?.value ||  80,
             slider: {
               min: 0,
               max: 100
@@ -226,14 +237,13 @@ export default Vue.extend({
         },
       },
     },
-    title: "設定",
     playingMidiNoteNumbers: [],
     toneConfig: {
-      waveform: "sine",
-      sustainMethod: "momentary",
-      isMajor: true,
-      musicalKey: "C",
-      toneRange: 2,
+      waveform: storedToneConfig?.waveform || "sine",
+      sustainMethod: storedToneConfig?.sustainMethod || "momentary",
+      isMajor: (storedToneConfig?.isMajor != null) ? storedToneConfig?.isMajor : true,
+      musicalKey: storedToneConfig?.musicalKey || "平均律",
+      toneRange: storedToneConfig?.toneRange || 2,
     },
     harmony: [{
       chordName: "",
@@ -246,11 +256,23 @@ export default Vue.extend({
       const matches = chordCheck(this.playingMidiNoteNumbers)
       if (matches.length > 0) {
         this.harmony = matches
-        if (this.items.general.items.autoKeySelect.value) {
+        if (this.settings.general.items.autoKeySelect.value) {
           this.toneConfig.musicalKey = matches[0].scaleName
           this.toneConfig.isMajor = matches[0].isMajor
         }
       }
+    },
+    settings: {
+      handler: function () {
+        storeData("settings", this.settings)
+      },
+      deep: true,
+    },
+    toneConfig: {
+      handler: function () {
+        storeData("toneConfig", this.toneConfig)
+      },
+      deep: true,
     }
   }
 });

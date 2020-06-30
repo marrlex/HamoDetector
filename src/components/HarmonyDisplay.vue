@@ -1,14 +1,13 @@
 <template>
   <v-card id="harmony-display-card" :dark="dark">
     <div class="text-display">
-      <v-card-title class="chord-name">{{ matchChords[0].scaleName }}{{ matchChords[0].chordName }}</v-card-title>
-      <v-card-text
-        class="chord-name"
-      >{{ relatedChordNames.join(", ") }}</v-card-text>
+      <span class="chord-name text-h4 mr-5">{{ `${matchChords[0].scaleName}${matchChords[0].chordName}` }}</span>
+      <span
+        class="chord-name text-body"
+      >{{ relatedChordNames.join(", ") }}</span>
     </div>
 
-    <div id="harmony-display" 
-          :style="`border: solid 1px ${dark ?'white':'#1E1E1E'}`">
+    <div id="harmony-display">
       <div class="white-keyboard">
         <div
           v-for="noteName in whiteNoteNames"
@@ -16,7 +15,7 @@
           :noteName="noteName"
           :style="`border: solid 1px ${dark ?'white':'#1E1E1E'}`"
           class="white-key"
-          :class="[{'primary': pressedNoteNames.includes(noteName)}, dark ? 'darken-5' : 'lighten-3']"
+          :class="[{'primary': pressedNoteNames.includes(noteName)}, dark ? 'darken-5' : 'lighten-5']"
         ><span class="note-text">{{noteName}}</span></div>
       </div>
       <div class="black-keyboard">
@@ -54,7 +53,7 @@ const chordToNoteIndexes: Record<string, number[]> = {
 }
 
 function chordNameToNoteNames(chordName: string, baseNote: string): string[] {
-  const noteIntervalSequence: number[] = chordToNoteIndexes[chordName]
+  const noteIntervalSequence: number[] = (chordName in chordToNoteIndexes) ? chordToNoteIndexes[chordName] : []
   const baseIndex: number = noteNames.indexOf(baseNote)
   return (baseIndex > -1) ? noteIntervalSequence.map((noteInterval) => noteNames[(noteInterval + baseIndex) % noteNames.length]) : []
 }
@@ -85,25 +84,22 @@ export default Vue.extend({
 
 <style scoped>
 #harmony-display-card {
-  display: relative;
-  height: 12rem;
+  height: 6em;
+}
+.text-display {
+  height: 3em;
 }
 #harmony-display {
   box-sizing: border-box;
   position: absolute;
   bottom: 0;
   width: 100%;
-  height: 6rem;
-  border: solid 1px black !important;
-}
-.text-display {
-  height: 6rem;
-  display: grid;
+  height: 3em;
 }
 .white-keyboard {
   z-index: 0;
   display: flex;
-  height: 6rem;
+  height: 3em;
   position: relative;
 }
 .black-keyboard {
@@ -111,7 +107,7 @@ export default Vue.extend({
   position: absolute;
   top: 0;
   display: flex;
-  height: 3rem;
+  height: 1.5em;
   width: 100%;
 }
 .white-key {
@@ -123,12 +119,12 @@ export default Vue.extend({
   flex-grow: 2;
   display: grid;
 }
-.note-text {
-  align-self: end;
-  justify-self: center;
-}
 .key-space{
   visibility: hidden;
   flex-grow: 1;
+}
+.note-text {
+  align-self: end;
+  justify-self: center;
 }
 </style>
