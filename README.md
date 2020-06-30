@@ -22,4 +22,4 @@
 
 
 ## デモページ
-[鱧ディテクター](https://cli.vuejs.org/config/)
+[鱧ディテクター](http://alex.webcrow.jp/hamo-detector/)
