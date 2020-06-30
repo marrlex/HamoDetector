@@ -1,0 +1,238 @@
+<template>
+    <div
+      id="piano-keyboard"
+      @pressKey="play"
+      @releaseKey="stop"
+      @mousedown="pressKey"
+      @mouseup="releaseKey"
+      @mouseleave="releaseKey"
+      @touchstart.prevent="pressKey"
+      @touchmove.prevent="moveKey"
+      @touchend.prevent="releaseKey"
+      @touchcancel="releaseKey"
+    >
+      <piano-key
+        v-for="n of interval"
+        :midiNoteNumber="n - 1 + startMidiNoteNumber"
+        :isPressed="isPressedIndexes.includes(n - 1 + startMidiNoteNumber)"
+        :isWhite="[0, 2, 3, 5, 7, 8, 10].includes((n - 1 + startMidiNoteNumber - 21) % 12)"
+        :key="n"
+        :interval="interval"
+      />
+    </div>
+</template>
+
+<script lang="ts">
+import Vue, { PropType } from 'vue'
+import PianoKey from './PianoKey.vue'
+import { getFreqByMidiNoteNumber } from './harmony'
+const toneNames = ['A', 'Bb', 'B', 'C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab']
+//window.AudioContext = window.AudioContext  || window.webkitAudioContext;
+
+interface KeyDetailType {
+  midiNoteNumber: number;
+  toneName: string;
+  octave: number;
+  isWhite: boolean;
+}
+
+export default Vue.extend({
+  name: 'piano-keyboard',
+  data: () => {
+    return {
+      isMouseDown: false,
+      touchIdentifiers: new Map() as Map<number, number>,
+      audioNodes: new Map() as Map<number, Record<string, OscillatorNode | GainNode | AnalyserNode>>,
+      audioCtx: new AudioContext(),
+      willStopMidiNoteNumbers: new Map() as Map<number, number>,
+    }
+  },
+  props: {
+    startMidiNoteNumber: Number,
+    interval: Number,
+    wavetype: String,
+    attackTimeConst: Number,
+    releaseTimeConst: Number,
+    isMajor: Boolean,
+    musicalKey: String,
+    stdFrequency: Number,
+    isPressedIndexes: Array as PropType<number[]>,
+    sustainMethod: String,
+  },
+  components: {
+    'piano-key': PianoKey
+  },
+  methods: {
+    play (midiNoteNumber: number) {
+      this.isPressedIndexes.push(midiNoteNumber)
+      if (this.audioCtx.state != "running") {
+        this.audioCtx = new AudioContext();
+      }
+      const osc = this.audioCtx.createOscillator();
+      const gain = this.audioCtx.createGain();
+      const ana = this.audioCtx.createAnalyser();
+      this.audioNodes.has(midiNoteNumber) || this.audioNodes.set(midiNoteNumber, {osc, gain, ana})
+      const freq = getFreqByMidiNoteNumber({
+        midiNoteNumber,
+        isMajor: this.isMajor,
+        scaleKeyNumber: toneNames.indexOf(this.musicalKey),
+        stdFreq: this.stdFrequency
+      })
+      osc.frequency.value = freq
+      osc.type = this.wavetype as OscillatorType
+      gain.gain.value = 0
+      osc.connect(gain)
+      gain.connect(ana)
+      ana.connect(this.audioCtx.destination)
+      osc.start()
+      gain.gain.setTargetAtTime(1, this.audioCtx.currentTime, this.attackTimeConst * 1e-3)
+    },
+    stop (midiNoteNumber: number) {
+      const index = this.isPressedIndexes.indexOf(midiNoteNumber)
+      this.isPressedIndexes.splice(index, 1);
+      (this.audioNodes.get(midiNoteNumber)?.gain as GainNode).gain.setTargetAtTime(0, this.audioCtx.currentTime, this.releaseTimeConst * 1e-3);
+      (this.audioNodes.get(midiNoteNumber)?.osc as OscillatorNode).stop(this.audioCtx.currentTime + 5);
+      this.audioNodes.delete(midiNoteNumber)
+    },
+    stopTones (midiNoteNumbers: number[]) {
+      for (const midiNoteNumber of midiNoteNumbers) {
+        if (this.startMidiNoteNumber <= midiNoteNumber && midiNoteNumber <= this.startMidiNoteNumber + this.interval) this.stop(midiNoteNumber)
+      }
+    },
+    clear () {
+      const pressedIndexes = [...this.isPressedIndexes]
+      for (const midiNoteNumber of pressedIndexes) {
+        console.log(midiNoteNumber)
+        this.stop(midiNoteNumber)
+      }
+      this.audioNodes.forEach(function(audioNode) {
+        (audioNode.osc as OscillatorNode).stop()
+      })
+    },
+    pressKey (event: MouseEvent | TouchEvent) {
+      const targetElement = event.target as HTMLDivElement
+      const midiNoteNumberAttr = targetElement.attributes.getNamedItem('midiNoteNumber')
+      if (midiNoteNumberAttr != null) {
+        const midiNoteNumber = Number(midiNoteNumberAttr.value)
+        if (!this.isPressedIndexes.includes(midiNoteNumber)) {
+          if (this.sustainMethod === "exclusive" && this.touchIdentifiers.size === 0) {
+            this.clear()
+          }
+          if (event.type === 'mousedown') {
+            this.isMouseDown = true
+          } else {
+            const id: number = (event as TouchEvent).targetTouches[0].identifier
+            this.touchIdentifiers.set(id, midiNoteNumber)
+          }
+          this.play(midiNoteNumber)
+        } else {
+          if (event.type === 'mousedown') {
+            if (this.sustainMethod === "alternative") {
+              this.willStopMidiNoteNumbers.set(0, midiNoteNumber)
+            }
+          } else {
+            const id: number = (event as TouchEvent).targetTouches[0].identifier
+            this.touchIdentifiers.set(id, midiNoteNumber)
+            if (this.sustainMethod ==="alternative") {
+              this.willStopMidiNoteNumbers.set(id, midiNoteNumber)
+            }
+          }
+        }
+      }
+    },
+    moveKey (event: TouchEvent) {
+      for (const touch of event.changedTouches) {
+        const id = touch.identifier
+        const currentElement = document.elementFromPoint(touch.pageX, touch.pageY)
+        if (currentElement != null) {
+          const midiNoteNumberAttr = currentElement.attributes.getNamedItem('midiNoteNumber')
+          if (midiNoteNumberAttr != null) {
+            const currentMidiNoteNumber = Number(midiNoteNumberAttr.value)
+            const oldMidiNoteNumber = this.touchIdentifiers.get(id)
+            if (this.touchIdentifiers.has(id) && oldMidiNoteNumber !== currentMidiNoteNumber) {
+              this.stop(this.touchIdentifiers.get(id) as number)
+              this.touchIdentifiers.set(id, currentMidiNoteNumber)
+              if (!this.isPressedIndexes.includes(currentMidiNoteNumber)) {
+                this.play(currentMidiNoteNumber)
+                if (this.sustainMethod ==="alternative") {
+                  this.willStopMidiNoteNumbers.delete(id)
+                }
+              } else {
+                if (this.sustainMethod ==="alternative") {
+                  this.willStopMidiNoteNumbers.set(id, currentMidiNoteNumber)
+                }
+              }
+            }
+          }
+        } else {
+          const oldMidiNoteNumber = this.touchIdentifiers.get(id)
+          if (oldMidiNoteNumber != undefined) {
+            this.stop(oldMidiNoteNumber)
+            this.touchIdentifiers.delete(id)
+          }
+        }
+      }
+    },
+    releaseKey (event: MouseEvent | TouchEvent) {
+      if (event.type === "mouseup") {
+        this.isMouseDown = false
+        const pressedKey = this.isPressedIndexes[0]
+        switch(this.sustainMethod) {
+          case "momentary":
+            this.stop(pressedKey)
+            break
+          case "alternative":
+            console.log(this.willStopMidiNoteNumbers.get(0))
+            if (this.willStopMidiNoteNumbers.has(0)) {
+              this.stop(this.willStopMidiNoteNumbers.get(0) as number)
+              this.willStopMidiNoteNumbers.delete(0)
+            }
+            break
+          case "exclusive":
+            break
+        }
+      } else if (/touch/.test(event.type)) {
+        const id = (event as TouchEvent).changedTouches[0].identifier
+        switch(this.sustainMethod) {
+          case "momentary":
+            this.touchIdentifiers.has(id) && this.stop(this.touchIdentifiers.get(id) as number)
+            break
+          case "alternative":
+            if (this.willStopMidiNoteNumbers.has(id)) {
+              this.stop(this.willStopMidiNoteNumbers.get(id) as number)
+              this.willStopMidiNoteNumbers.delete(id)
+            }
+            break
+          case "exclusive":
+            break
+        }
+        this.touchIdentifiers.delete(id)
+      }
+    }
+  },
+  watch: {
+    sustainMethod: function() {
+      if (this.sustainMethod === "momentary") this.clear()
+    }
+  }
+})
+</script>
+
+<style scoped>
+#piano-keyboard {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  white-space: nowrap;
+  margin: 0;
+}
+.white-key {
+  z-index: 0;
+  position: relative;
+}
+.black-key {
+  z-index: 1;
+  position: absolute;
+  top: 0px;
+}
+</style>

@@ -1,32 +1,259 @@
 <template>
-  <div id="app">
-    <div id="nav">
-      <router-link to="/">Home</router-link> |
-      <router-link to="/about">About</router-link>
-    </div>
-    <router-view/>
-  </div>
+  <v-app>
+    <v-app-bar
+      dense=""
+      :dark="items.general.items.colorTheme.value"
+      app
+      fixed=""
+      width="100vw"
+    >
+      <v-toolbar-title>鱧ディテクター</v-toolbar-title>
+      <v-spacer></v-spacer>
+      <v-btn :dark="items.general.items.colorTheme.value" icon @click.stop="drawer = !drawer">
+        <v-icon>settings</v-icon>
+      </v-btn>
+    </v-app-bar>
+    <v-navigation-drawer
+      v-model="drawer"
+      absolute
+      temporary
+      right
+      app
+      :dark="items.general.items.colorTheme.value"
+    >
+      <v-list-item :dark="items.general.items.colorTheme.value">
+        <v-list-item-content>
+          <v-list-item-title class="text-subtitle-1">{{ title }}</v-list-item-title>
+        </v-list-item-content>
+      </v-list-item>
+
+      <v-list dense :dark="items.general.items.colorTheme.value">
+        <v-list-group
+          v-for="item in items"
+          :key="item.title"
+          v-model="item.active"
+          :prepend-icon="item.action"
+          no-action
+        >
+          <template v-slot:activator>
+            <v-list-item-content>
+              <v-list-item-title v-text="item.title"></v-list-item-title>
+            </v-list-item-content>
+          </template>
+
+          <v-container fluid>
+            <v-row
+              v-for="subItem in item.items"
+              :key="subItem.title"
+              no-gutters=""
+              justify="space-between"
+            >
+              <v-col>
+                <v-subheader>
+                  {{ subItem.title }}
+                  <span
+                    v-if="'slider' in subItem"
+                  >： {{ subItem.value }}</span>
+                </v-subheader>
+                <v-slider
+                  v-if="'slider' in subItem"
+                  v-model="subItem.value"
+                  thumb-label
+                  :min="subItem.slider.min"
+                  :max="subItem.slider.max"
+                  append-icon="add"
+                  prepend-icon="remove"
+                  @click:append="subItem.value++"
+                  @click:prepend="subItem.value--"
+                ></v-slider>
+              </v-col>
+              <v-col v-if="'select' in subItem">
+                <v-select
+                  :items="subItem.select"
+                  v-model="subItem.value"
+                  dense
+                ></v-select>
+              </v-col>
+              <v-col v-if="subItem.switch">
+                <v-switch v-model="subItem.value" class="mt-1" dense></v-switch>
+              </v-col>
+            </v-row>
+          </v-container>
+          <v-divider></v-divider>
+        </v-list-group>
+      </v-list>
+    </v-navigation-drawer>
+
+    <v-main style="height: 100vh">
+      <v-container fluid style="height: 100%">
+        <v-row wrap dense style="height: 100%" class="overflow-y-auto">
+          <v-col cols="12" md="12" lg="6" order-lg="4" order-xl="4" order-sm="first" order-md="first" :style="`width: ${$vuetify.breakpoint.thresholds.md}`">
+            <harmony-display
+              style="max-height: 100%"
+              :dark="items.general.items.colorTheme.value"
+              :matchChords="harmony"
+            ></harmony-display>
+          </v-col>
+
+          <v-col cols="12" md="6" lg="3" order-lg="first" order-xl="first" order-sm="7" order-md="7" :style="`width: ${$vuetify.breakpoint.thresholds.md}`">
+            <tonecolor-card
+              style="max-height: 100%"
+              :dark="items.general.items.colorTheme.value"
+              :waveform.sync="toneConfig.waveform"
+              :sustainMethod.sync="toneConfig.sustainMethod"
+              :toneRange.sync="toneConfig.toneRange"
+              :isMajor.sync="toneConfig.isMajor"
+              :musicalKey.sync="toneConfig.musicalKey"
+            ></tonecolor-card>
+          </v-col>
+          
+
+          <v-col cols="12" md="6" lg="3" order="last" :style="`width: ${$vuetify.breakpoint.thresholds.md}`">
+            <metronome-card
+              :dark="items.general.items.colorTheme.value"
+              style="max-height: 100%"
+              :values="items.metronome"
+            ></metronome-card>
+          </v-col>
+        </v-row>
+      </v-container>
+    </v-main>
+
+    <v-footer max-height="40%" width="100vw" padless="" fixed="">
+      <v-container fluid class="ma-0" style="width: 100vw">
+        <piano-keyboard
+          :startMidiNoteNumber="toneConfig.toneRange * 12 + 24"
+          :interval="$vuetify.breakpoint.mdAndUp ? 49 : 25"
+          :isPressedIndexes="playingMidiNoteNumbers"
+          :sustainMethod="toneConfig.sustainMethod"
+          :wavetype="toneConfig.waveform"
+          :attackTimeConst="items.toneColor.items.attack.value"
+          :releaseTimeConst="items.toneColor.items.release.value"
+          :isMajor="toneConfig.isMajor"
+          :musicalKey="toneConfig.musicalKey"
+          :stdFrequency="items.general.items.baseFrequency.value"
+        ></piano-keyboard>
+      </v-container>
+    </v-footer>
+  </v-app>
 </template>
 
-<style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-}
+<script lang="ts">
+import Vue from 'vue'
+import '@mdi/font/css/materialdesignicons.css'
+import './assets/fonts/css/musisync.css'
+import 'material-design-icons-iconfont/dist/material-design-icons.css'
+import PianoKeyboard from './components/keyboard/Keyboard.vue'
+import MetronomeCard from './components/MetronomeCard.vue'
+import ToneColorCard from './components/ToneColorCard.vue'
+import HarmonyDisplay from './components/HarmonyDisplay.vue'
+import { chordCheck } from './components/keyboard/harmony'
 
-#nav {
-  padding: 30px;
-}
+export default Vue.extend({
+  name: 'App',
 
-#nav a {
-  font-weight: bold;
-  color: #2c3e50;
-}
+  components: {
+    'piano-keyboard': PianoKeyboard,
+    'metronome-card': MetronomeCard,
+    'tonecolor-card': ToneColorCard,
+    'harmony-display': HarmonyDisplay,
+  },
 
-#nav a.router-link-exact-active {
-  color: #42b983;
-}
+  data: () => ({
+    drawer: null,
+    items: {
+      general: {
+        title: '一般',
+        active: false,
+        items: {
+          autoKeySelect: {
+            title: '調の自動選択',
+            value: true,
+            switch: true
+          },
+          baseFrequency: {
+            title: '基本周波数',
+            value: 442,
+            slider: {
+              min: 435,
+              max: 445
+            }
+          },
+          /*
+          keyboardSize: {
+            title: 'キーボードサイズ',
+            value: 50,
+            slider: {
+              min: 1,
+              max: 100
+            }
+          },
+          */
+          colorTheme: {
+            title: 'ダークモード',
+            value: false,
+            switch: true
+            /*
+            select: [
+              'Cute',
+              'Nature',
+              'Cool'
+            ]
+            */
+          },
+        },
+      },
+      toneColor: {
+        title: '音形',
+        active: false,
+        items: {
+          attack: {
+            title: 'アタック',
+            value: 80,
+            slider: {
+              min: 0,
+              max: 100
+            }
+          },
+          release: {
+            title: 'リリース',
+            value: 80,
+            slider: {
+              min: 0,
+              max: 100
+            }
+          },
+        },
+      },
+    },
+    title: "設定",
+    playingMidiNoteNumbers: [],
+    toneConfig: {
+      waveform: "sine",
+      sustainMethod: "momentary",
+      isMajor: true,
+      musicalKey: "C",
+      toneRange: 2,
+    },
+    harmony: [{
+      chordName: "",
+      scaleName: "",
+    }]
+  }),
+
+  watch: {
+    playingMidiNoteNumbers: function () {
+      const matches = chordCheck(this.playingMidiNoteNumbers)
+      if (matches.length > 0) {
+        this.harmony = matches
+        if (this.items.general.items.autoKeySelect.value) {
+          this.toneConfig.musicalKey = matches[0].scaleName
+          this.toneConfig.isMajor = matches[0].isMajor
+        }
+      }
+    }
+  }
+});
+</script>
+<style scoped>
 </style>

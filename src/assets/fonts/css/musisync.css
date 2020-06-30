@@ -1,0 +1,7 @@
+@font-face {
+    font-family: 'musisync';
+    src: url('../Musisync.ttf') format('truetype');
+}
+.musisync {
+    font-family: 'musisync';    
+}
