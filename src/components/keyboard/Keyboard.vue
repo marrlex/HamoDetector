@@ -42,9 +42,11 @@ export default Vue.extend({
     return {
       isMouseDown: false,
       touchIdentifiers: new Map() as Map<number, number>,
-      audioNodes: new Map() as Map<number, Record<string, OscillatorNode | GainNode | AnalyserNode>>,
-      audioCtx: new AudioContext(),
       willStopMidiNoteNumbers: new Map() as Map<number, number>,
+      audioCtx: undefined as AudioContext | undefined,
+      masterGain:undefined as GainNode | undefined,
+      comp:undefined as DynamicsCompressorNode | undefined,
+      audioNodes: new Map() as Map<number, {osc: OscillatorNode; gain: GainNode /* ; ana: AnalyserNode */}>,
     }
   },
   props: {
@@ -63,15 +65,26 @@ export default Vue.extend({
     'piano-key': PianoKey
   },
   methods: {
+    initializeAudioContext() {
+      this.audioCtx = new AudioContext()
+      this.comp = this.audioCtx.createDynamicsCompressor()
+      this.comp.attack.value = 0;
+      this.comp.release.value = 0;
+      this.comp.connect(this.audioCtx.destination)
+      this.masterGain = this.audioCtx.createGain()
+      this.masterGain.gain.value = 0.1
+      this.masterGain.connect(this.comp)
+    },
     play (midiNoteNumber: number) {
       this.isPressedIndexes.push(midiNoteNumber)
-      if (this.audioCtx.state != "running") {
-        this.audioCtx = new AudioContext();
+      if (this.audioCtx === undefined || this.audioCtx.state !== "running") {
+        this.initializeAudioContext()
       }
-      const osc = this.audioCtx.createOscillator();
-      const gain = this.audioCtx.createGain();
-      const ana = this.audioCtx.createAnalyser();
-      this.audioNodes.has(midiNoteNumber) || this.audioNodes.set(midiNoteNumber, {osc, gain, ana})
+      const ac = this.audioCtx as AudioContext
+      const osc = ac.createOscillator()
+      const gain = ac.createGain()
+      // const ana = this.audioCtx.createAnalyser();
+      this.audioNodes.has(midiNoteNumber) || this.audioNodes.set(midiNoteNumber, {osc, gain})
       const freq = getFreqByMidiNoteNumber({
         midiNoteNumber,
         isMajor: this.isMajor,
@@ -82,16 +95,17 @@ export default Vue.extend({
       osc.type = this.wavetype as OscillatorType
       gain.gain.value = 0
       osc.connect(gain)
-      gain.connect(ana)
-      ana.connect(this.audioCtx.destination)
+      gain.connect(this.masterGain as GainNode)
+      // ana.connect(this.audioCtx.destination)
       osc.start()
-      gain.gain.setTargetAtTime(1, this.audioCtx.currentTime, this.attackTimeConst * 1e-3)
+      gain.gain.setTargetAtTime(1, ac.currentTime, this.attackTimeConst * 1e-3)
     },
     stop (midiNoteNumber: number) {
       const index = this.isPressedIndexes.indexOf(midiNoteNumber)
-      this.isPressedIndexes.splice(index, 1);
-      (this.audioNodes.get(midiNoteNumber)?.gain as GainNode).gain.setTargetAtTime(0, this.audioCtx.currentTime, this.releaseTimeConst * 1e-3);
-      (this.audioNodes.get(midiNoteNumber)?.osc as OscillatorNode).stop(this.audioCtx.currentTime + 5);
+      const ac = this.audioCtx as AudioContext
+      this.isPressedIndexes.splice(index, 1)
+      this.audioNodes.get(midiNoteNumber)?.gain.gain.setTargetAtTime(0, ac.currentTime, this.releaseTimeConst * 1e-3);
+      this.audioNodes.get(midiNoteNumber)?.osc.stop(ac.currentTime + 5);
       this.audioNodes.delete(midiNoteNumber)
     },
     stopTones (midiNoteNumbers: number[]) {
@@ -100,11 +114,13 @@ export default Vue.extend({
       }
     },
     clear () {
-      const pressedIndexes = [...this.isPressedIndexes]
-      for (const midiNoteNumber of pressedIndexes) {
+      for (const midiNoteNumber of this.audioNodes.keys()) {
         this.stop(midiNoteNumber)
       }
-      this.audioCtx.close()
+      if (this.audioCtx !== undefined && this.audioCtx.state !== "running") {
+        const ac = this.audioCtx as AudioContext
+        ac.close()
+      }
     },
     replay () {
       const pressedIndexes = [...this.isPressedIndexes]
@@ -117,8 +133,9 @@ export default Vue.extend({
         })
         const audioNode = this.audioNodes.get(midiNoteNumber);
         if (audioNode != undefined) {
-          const osc = (audioNode.osc as OscillatorNode)
-          osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime)
+          const ac = this.audioCtx as AudioContext
+          const osc = audioNode.osc
+          osc.frequency.setValueAtTime(freq, ac.currentTime)
           osc.type = this.wavetype as OscillatorType
         }
       }
@@ -128,10 +145,10 @@ export default Vue.extend({
       const midiNoteNumberAttr = targetElement.attributes.getNamedItem('midiNoteNumber')
       if (midiNoteNumberAttr != null) {
         const midiNoteNumber = Number(midiNoteNumberAttr.value)
+        if (this.sustainMethod === "exclusive" && this.touchIdentifiers.size === 0) {
+          this.clear()
+        }
         if (!this.isPressedIndexes.includes(midiNoteNumber)) {
-          if (this.sustainMethod === "exclusive" && this.touchIdentifiers.size === 0) {
-            this.clear()
-          }
           if (event.type === 'mousedown') {
             this.isMouseDown = true
           } else {

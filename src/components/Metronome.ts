@@ -1,11 +1,26 @@
+declare global {
+    interface Window {
+        webkitAudioContext: typeof AudioContext;
+    }
+}
+
 window.AudioContext = window.AudioContext || window.webkitAudioContext;
 
 export class MetronomeNote {
-    constructor(beatInt, volume, freq) {
-        this.beatInterval = beatInt
+    beatInterval: number
+    _volume: number
+    frequency: number
+    ctx: AudioContext
+    osc: OscillatorNode
+    gain: GainNode
+
+    constructor(beatInterval: number, volume: number, freq: number) {
+        this.beatInterval = beatInterval
         this._volume = volume / 100
         this.frequency = freq
-        this.ctx
+        this.ctx = new AudioContext()
+        this.osc = this.ctx.createOscillator()
+        this.gain = this.ctx.createGain()
     }
     init() {
         this.osc = this.ctx.createOscillator()
@@ -17,7 +32,7 @@ export class MetronomeNote {
         this.gain.connect(this.ctx.destination)
         this.osc.start()
     }
-    reserveBeat(current48Beat, nextBeatTime, currentTimeSignature) {
+    reserveBeat(current48Beat: number, nextBeatTime: number, currentTimeSignature: number) {
         if (this.beatInterval) {
             if (current48Beat % this.beatInterval === 0) {
                 this.gain.gain.setValueAtTime(this._volume, nextBeatTime)
@@ -28,21 +43,47 @@ export class MetronomeNote {
             this.gain.gain.linearRampToValueAtTime(0, nextBeatTime + 0.05);   
         }
     }
-    set audioContext(ctx) {
+    set audioContext(ctx: AudioContext) {
         this.ctx = ctx
         this.init()
     }
-    set volume(newVolume) {
+    set volume(newVolume: number) {
         this._volume = newVolume / 100
     }
 }
 
 export class MetronomeBeater {
-    constructor (metronomeNotes) {
-        this.ctx
+    ctx: AudioContext
+    metronomeNotes: MetronomeNote[]
+    tempo: number
+    currentTimeSignature: number
+    current48Beat: number
+    currentSignatureIndex: number
+    isChangedSignature: boolean
+    lastBeatTimeStamp: number
+    nextBeatTimeStamp: number
+    // nextTimeSignature: number
+    baseTimeStamp: number
+    intervalId: number
+    signature: number[]
+
+
+    constructor (metronomeNotes: MetronomeNote[]) {
+        this.ctx = new AudioContext()
         this.metronomeNotes = metronomeNotes
+        this.currentTimeSignature = 0
+        this.current48Beat = 0
+        this.currentSignatureIndex = 0
+        this.isChangedSignature = false
+        this.lastBeatTimeStamp = 0
+        this.nextBeatTimeStamp = 0
+        this.baseTimeStamp = 0
+        this.tempo = 60
+        this.signature = [4]
+        this.intervalId = 0
     }
-    start (tempo, timeSignature) {
+
+    start (tempo: number, timeSignature: number) {
         this.ctx = new AudioContext()
         this.currentTimeSignature = 0
         this.current48Beat = 0
@@ -51,7 +92,7 @@ export class MetronomeBeater {
         const nowTimeStamp = performance.now()
         this.lastBeatTimeStamp = nowTimeStamp
         this.nextBeatTimeStamp = nowTimeStamp
-        this.nextTimeSignature = this.nextNote.bind(this)
+        // this.nextTimeSignature = this.nextNote.bind(this)
         this.baseTimeStamp = nowTimeStamp - this.ctx.currentTime * 1000
         for (const note of Object.values(this.metronomeNotes)) {
             note.audioContext = this.ctx
@@ -64,12 +105,11 @@ export class MetronomeBeater {
     stop () {
         this.ctx.close()
         clearInterval(this.intervalId)
-        this.intervalId = null
     }
     currentTimeStamp() {
         return this.baseTimeStamp + this.ctx.currentTime * 1000
     }
-    timeStampToAudioContextTime(timeStamp) {
+    timeStampToAudioContextTime(timeStamp: number) {
         return (timeStamp - this.baseTimeStamp) / 1000
     }
     nextNote() {
@@ -92,7 +132,7 @@ export class MetronomeBeater {
         }
         return this
     }
-    set timeSignatureNumerator(signature) {
+    set timeSignatureNumerator(signature: number) {
         this.signature = [signature]
     }
     scheduler() {

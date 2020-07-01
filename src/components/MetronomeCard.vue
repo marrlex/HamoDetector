@@ -85,7 +85,7 @@
 </template>
 
 <script>
-import { MetronomeNote, MetronomeBeater } from './Metronome.js'
+import { MetronomeNote, MetronomeBeater } from './Metronome.ts'
 export default {
   name: "MetronomeCard",
   props: {

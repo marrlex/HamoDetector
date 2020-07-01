@@ -1,5 +1,5 @@
 const noteNames = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
-const freqRatio = {
+const freqRatio: Record<"major" | "minor", number[]> = {
     major: [1, 25/24, 9/8, 6/5, 5/4, 4/3, 25/18, 3/2, 25/16, 5/3, 9/5, 15/8, 2],
     minor: [1, 27/25, 9/8, 6/5, 5/4, 4/3, 36/25, 3/2, 8/5, 5/3, 9/5, 15/8, 2],
 }
@@ -77,24 +77,25 @@ function isSuperset(set: Set<number>, subset: Set<number>) {
     return true;
 }
 
+const midiNoteNumberOfA0 = 21
+const octaveInterval = 12
 export function getFreqByMidiNoteNumber({
-    midiNoteNumber = 21,
-    isMajor = true,
-    scaleKeyNumber = -1,
-    stdFreq = 442
-}) {
-    const midiNoteNumberOfA0 = 21
-    const baseFreq = stdFreq / (2 ** 3)
+        midiNoteNumber = 21,
+        isMajor = true,
+        scaleKeyNumber = -1,
+        stdFreq = 442 // A4
+    }) {
+    const baseFreq = stdFreq / (2 ** 4) // A0
     if (scaleKeyNumber < 0) {
-        return baseFreq  * (2 ** ((midiNoteNumber - midiNoteNumberOfA0) / 12))
+        return baseFreq  * (2 ** ((midiNoteNumber - midiNoteNumberOfA0) / octaveInterval))
     } else {
         const baseMidiNoteNumber = scaleKeyNumber + midiNoteNumberOfA0
-        const degree = (midiNoteNumber - baseMidiNoteNumber) % 12;
-        const currentFreqRatio = freqRatio[isMajor ? "major" : "minor"];
-        const referFreq = baseFreq * (2 ** (scaleKeyNumber / 12));
-        const octave = Math.floor(midiNoteNumber / 12) - 2;
-        const octaveCorrect = (midiNoteNumber % 12 + 3 < scaleKeyNumber) ? 1 : 0
-        return (referFreq * currentFreqRatio[degree]) * 2 ** (octave - octaveCorrect)
+        const degree = (octaveInterval + midiNoteNumber - baseMidiNoteNumber) % octaveInterval
+        const currentFreqRatio = freqRatio[isMajor ? "major" : "minor"]
+        const referBaseFreq = baseFreq * (2 ** (scaleKeyNumber / octaveInterval))
+        const referWishFreq = referBaseFreq * currentFreqRatio[degree]
+        const octave = Math.floor((midiNoteNumber - midiNoteNumberOfA0 - scaleKeyNumber) / octaveInterval) + 1
+        return referWishFreq * (2 ** octave)
     }
 }
 
@@ -103,9 +104,9 @@ export function chordCheck(playingMidiNoteNumbers: number[]) {
     midiNoteNumbers.sort((a, b) => {
         return (a > b) ? 1 : -1
     });
-    const toneNumbersInC = [...new Set(midiNoteNumbers.map((value) => value % 12))]
+    const toneNumbersInC = [...new Set(midiNoteNumbers.map((value) => value % octaveInterval))]
     const toneDistance = (base: number, higher: number) => {
-        return (higher > base) ? higher - base : (12 + higher - base) % 12
+        return (higher > base) ? higher - base : (octaveInterval + higher - base) % octaveInterval
     }
     const result = [];
     for (let i = 0; i < toneNumbersInC.length; i++) {
