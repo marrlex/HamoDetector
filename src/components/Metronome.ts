@@ -59,7 +59,6 @@ export class MetronomeBeater {
     currentTimeSignature: number
     current48Beat: number
     currentSignatureIndex: number
-    isChangedSignature: boolean
     lastBeatTimeStamp: number
     nextBeatTimeStamp: number
     // nextTimeSignature: number
@@ -74,7 +73,6 @@ export class MetronomeBeater {
         this.currentTimeSignature = 0
         this.current48Beat = 0
         this.currentSignatureIndex = 0
-        this.isChangedSignature = false
         this.lastBeatTimeStamp = 0
         this.nextBeatTimeStamp = 0
         this.baseTimeStamp = 0
@@ -83,22 +81,20 @@ export class MetronomeBeater {
         this.intervalId = 0
     }
 
-    start (tempo: number, timeSignature: number) {
+    start (tempo: number, timeSignatures: number[]) {
         this.ctx = new AudioContext()
         this.currentTimeSignature = 0
         this.current48Beat = 0
         this.currentSignatureIndex = 0
-        this.isChangedSignature = false
         const nowTimeStamp = performance.now()
         this.lastBeatTimeStamp = nowTimeStamp
         this.nextBeatTimeStamp = nowTimeStamp
-        // this.nextTimeSignature = this.nextNote.bind(this)
         this.baseTimeStamp = nowTimeStamp - this.ctx.currentTime * 1000
         for (const note of Object.values(this.metronomeNotes)) {
             note.audioContext = this.ctx
         }
         this.tempo = tempo
-        this.timeSignatureNumerator = timeSignature;
+        this.timeSignatureNumerator = timeSignatures;
         (this.scheduler.bind(this))()
         this.intervalId = setInterval(this.scheduler.bind(this), 500)
     }
@@ -114,14 +110,10 @@ export class MetronomeBeater {
     }
     nextNote() {
         const beatTick = 60 * 1000 / this.tempo
-        if (this.isChangedSignature) {
-            this.currentSignatureIndex = 0
-            this.isChangedSignature = false
-        }
         this.nextBeatTimeStamp += beatTick / 12
         this.current48Beat++
         this.current48Beat %= 12
-        if (!this.current48Beat) {
+        if (this.current48Beat > 0) {
             this.currentTimeSignature++
             this.currentSignatureIndex %= this.signature.length
             if (this.currentTimeSignature >= this.signature[this.currentSignatureIndex]) {
@@ -130,10 +122,10 @@ export class MetronomeBeater {
                 this.currentSignatureIndex %= this.signature.length
             }
         }
-        return this
     }
-    set timeSignatureNumerator(signature: number) {
-        this.signature = [signature]
+    set timeSignatureNumerator(signatures: number[]) {
+        this.currentSignatureIndex = 0
+        this.signature = signatures
     }
     scheduler() {
         const now = this.currentTimeStamp()

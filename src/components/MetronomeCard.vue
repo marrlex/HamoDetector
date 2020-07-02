@@ -2,81 +2,102 @@
   <v-card id="metronome-card" :dark="dark">
     <v-card-text>
       <v-container class="overflow-y-auto pa-3" fluid>
-        <v-row no-gutters="" align="center">
-          <v-col align-self="center" cols=7>
-          <v-icon class="mb-2 mr-2" @click="changeTempo('decrement')">remove</v-icon>
-          <span class="display-1 font-weight-light">{{ items.tempo.value}}</span>
-          <span class="subheading font-weight-light ml-1">BPM</span>
-          <v-icon class="mb-2 ml-2" @click="changeTempo('increment')">add</v-icon>
+        <v-row no-gutters="">
+          <v-col cols="11">
+            <v-row no-gutters="" align="center">
+              <v-col cols="8" align-self="center">
+                <v-row no-gutters="" align="center">
+                  <v-col cols="auto"><v-icon @click="items.tempo.value--">remove</v-icon></v-col>
+                  <v-col cols="auto" class="ml-2 mr-2">
+                    <span class="display-1 font-weight-light">{{ items.tempo.value}}</span>
+                    <span class="subheading font-weight-light ml-1">BPM</span>
+                  </v-col>
+                  <v-col cols="auto"><v-icon @click="items.tempo.value++">add</v-icon></v-col>
+                </v-row>
+              </v-col>
+            </v-row>
           </v-col>
-          <v-col cols=2>
-            <v-select
-                v-model="items.timeSignature.value"
-                :items="items.timeSignature.select"
-                dense
-                hide-details
-                label="拍子"
-                @change="isPlaying && (beater.timeSignatureNumerator = items.timeSignature.value)"
-            ></v-select>
-          </v-col>
-          <v-col class="text-right" cols=3>
-          <v-btn
+          <v-col cols="1">
+            <v-btn
               depressed
               text
               outlined=""
               small
+              icon
               @click="metroHandler"
-          >
+            >
               <v-icon>
-              {{ isPlaying ? 'mdi-pause' : 'mdi-play' }}
+                {{ isPlaying ? 'mdi-pause' : 'mdi-play' }}
               </v-icon>
-          </v-btn>
+            </v-btn>
           </v-col>
-      </v-row>
-      <v-row>
-        <v-col cols=12>
-          <v-slider
+        </v-row>
+        <v-row>
+          <v-col cols="12">
+            <v-slider
               v-model="items.tempo.value"
               dense
               hide-details=""
               :min="items.tempo.slider.min"
               :max="items.tempo.slider.max"
-              :label="items.tempo.title"
               @change="isPlaying && (beater.tempo = items.tempo.value)"
-          ></v-slider>
+            ></v-slider>
+            </v-col>
+        </v-row>
+        <v-row
+          no-gutters
+          align="center"
+        >
+          <v-col cols="auto" class="musisync">
+            <span>拍子</span>
           </v-col>
-      </v-row>
-      <v-row
+          <v-col cols="auto" style="max-width: 50%">
+            <v-select
+              v-if="Number.isInteger(items.timeSignature.value)"
+              class="ml-2 mr-2 mt-0 mb-1"
+              v-model="items.timeSignature.value"
+              :items="items.timeSignature.select"
+              outlined=""
+              suffix="/4"
+              dense
+              hide-details
+            ></v-select>
+            <v-text-field
+              v-else
+              class="ml-2 mr-2 mt-0 mb-1"
+              v-model="items.timeSignature.complexValue"
+              autofocus=""
+              placeholder="2+3"
+              suffix="/4"
+              hide-details=""
+              append-icon="mdi-chevron-up"
+              @click:append="items.timeSignature.value = 4"
+              dense
+            >
+            </v-text-field>
+          </v-col>
+        </v-row>
+        <v-divider></v-divider>
+        <v-card-subtitle class="pl-0">音量</v-card-subtitle>
+        <v-row
           v-for="(subItem, key) in volumes"
           :key="subItem.title"
           no-gutters
           justify="space-between"
           align="center"
-      >
-          <v-col
-          cols=12
-          v-if="'slider' in subItem"
-          >
+        >
+          <v-col cols="auto" class="musisync">
+            <span>{{ subItem.icon || subItem.title }}</span>
+          </v-col>
+          <v-col>
           <v-slider
               v-model="subItem.value"
               dense
               :min="subItem.slider.min"
               :max="subItem.slider.max"
-              class="musisync"
               hide-details=""
-              :label="subItem.icon || subItem.title"
               @change="changeVolume(key)"
           ></v-slider>
-          </v-col>
-          <v-col v-if="'select' in subItem" cols=9>
-          <v-select
-              :items="subItem.select"
-              v-model="subItem.value"
-              dense
-          ></v-select>
-          </v-col>
-          <v-col v-if="subItem.switch" cols=9>
-          <v-switch v-model="subItem.value" class="mt-0" dense :label="subItem.title"></v-switch>
           </v-col>
         </v-row>
       </v-container>
@@ -107,7 +128,8 @@ export default {
       timeSignature: {
         title: '拍子',
         value: 4,
-        select: [1, 2, 3, 4]
+        complexValue: '',
+        select: [1, 2, 3, 4, '複合']
       },
     },
     volumes: {
@@ -180,7 +202,9 @@ export default {
         semiquaver: this.volumes.semiquaver.metronomeNote,
         triplet: this.volumes.triplet.metronomeNote,
       })
-      this.beater.start(this.items.tempo.value, this.items.timeSignature.value)
+      const timeSignatureValue = this.items.timeSignature.value
+      const timeSignatureNumerator = Number.isInteger(timeSignatureValue) ? [timeSignatureValue] : (this.items.timeSignature.complexValue || "2+3").split(/[^\d]/).map((str) => Number(str))
+      this.beater.start(this.items.tempo.value, timeSignatureNumerator)
     },
     stop() {
       this.beater.stop()
@@ -199,7 +223,17 @@ export default {
     },
     changeVolume(key) {
       this.volumes[key].metronomeNote.volume = this.volumes[key].value
-    }
+    },
+  },
+  watch: {
+    'items.timeSignature.value': function () {
+      const timeSignatureValue = this.items.timeSignature.value
+      const timeSignatureNumerator = Number.isInteger(timeSignatureValue) ? [timeSignatureValue] : (this.items.timeSignature.complexValue || "2+3").split(/[^\d]/).map((str) => Number(str))
+      this.isPlaying && (this.beater.timeSignatureNumerator = timeSignatureNumerator)
+    },
+    'items.tempo.value': function () {
+      this.beater.tempo = this.items.tempo.value
+    },
   }
 }
 </script>
@@ -208,8 +242,8 @@ export default {
 #metronome-card {
   overflow-y: auto;
 }
-label.v-label {
-  width: 3em;
+.musisync {
+  width: 4em !important;
   text-align: center;
 }
 </style>
