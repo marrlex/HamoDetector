@@ -1,9 +1,12 @@
 const noteNames = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
-const freqRatio: Record<"major" | "minor", number[]> = {
-    major: [1, 25/24, 9/8, 6/5, 5/4, 4/3, 25/18, 3/2, 25/16, 5/3, 9/5, 15/8, 2],
-    minor: [1, 27/25, 9/8, 6/5, 5/4, 4/3, 36/25, 3/2, 8/5, 5/3, 9/5, 15/8, 2],
+const freqRatio: Map<"major" | "minor", number[]> = new Map([
+    ["major", [1, 25/24, 9/8, 6/5, 5/4, 4/3, 25/18, 3/2, 25/16, 5/3, 9/5, 15/8]],
+    ["minor", [1, 27/25, 9/8, 6/5, 5/4, 4/3, 36/25, 3/2, 8/5, 5/3, 9/5, 15/8]],
+])
+const centDiffrences: Map<"major" | "minor", number[]> = new Map()
+for (const [key, ratio] of freqRatio) {
+    centDiffrences.set(key, ratio.map((ratio, index) => 12 * Math.log2(ratio / (2 ** (index / 12))) * 100))
 }
-
 
 const chords = [
     {
@@ -91,12 +94,22 @@ export function getFreqByMidiNoteNumber({
     } else {
         const baseMidiNoteNumber = scaleKeyNumber + midiNoteNumberOfA0
         const degree = (octaveInterval + midiNoteNumber - baseMidiNoteNumber) % octaveInterval
-        const currentFreqRatio = freqRatio[isMajor ? "major" : "minor"]
+        const currentFreqRatio = freqRatio.get(isMajor ? "major" : "minor") as number[]
         const referBaseFreq = baseFreq * (2 ** (scaleKeyNumber / octaveInterval))
         const referWishFreq = referBaseFreq * currentFreqRatio[degree]
         const octave = Math.floor((midiNoteNumber - midiNoteNumberOfA0 - scaleKeyNumber) / octaveInterval) + 1
         return referWishFreq * (2 ** octave)
     }
+}
+
+export function getCentDifferenceInC(scaleName: string, isMajor: boolean): number[] {
+    const scaleIndex = noteNames.indexOf(scaleName)
+    if (scaleIndex < 0) {
+        return Array(octaveInterval).fill(0)
+    }
+    const wishCentDifference = centDiffrences.get(isMajor ? "major" : "minor") as number[]
+    const [former, latter] = [wishCentDifference.slice(0, -scaleIndex), wishCentDifference.slice(-scaleIndex)]
+    return [...latter, ...former]
 }
 
 export function chordCheck(playingMidiNoteNumbers: number[]) {

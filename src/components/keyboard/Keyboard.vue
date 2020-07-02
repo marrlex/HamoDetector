@@ -67,13 +67,13 @@ export default Vue.extend({
   methods: {
     initializeAudioContext() {
       this.audioCtx = new AudioContext()
+      this.masterGain = this.audioCtx.createGain()
+      this.masterGain.gain.value = 0.1
+      this.masterGain.connect(this.audioCtx.destination)
       this.comp = this.audioCtx.createDynamicsCompressor()
       this.comp.attack.value = 0;
       this.comp.release.value = 0;
-      this.comp.connect(this.audioCtx.destination)
-      this.masterGain = this.audioCtx.createGain()
-      this.masterGain.gain.value = 0.1
-      this.masterGain.connect(this.comp)
+      this.comp.connect(this.masterGain)
     },
     play (midiNoteNumber: number) {
       this.isPressedIndexes.push(midiNoteNumber)
@@ -93,19 +93,25 @@ export default Vue.extend({
       })
       osc.frequency.value = freq
       osc.type = this.wavetype as OscillatorType
-      gain.gain.value = 0
+      gain.gain.setValueAtTime(0, ac.currentTime)
       osc.connect(gain)
       gain.connect(this.masterGain as GainNode)
       // ana.connect(this.audioCtx.destination)
       osc.start()
-      gain.gain.setTargetAtTime(1, ac.currentTime, this.attackTimeConst * 1e-3)
+      gain.gain.linearRampToValueAtTime(1, ac.currentTime + (100 - this.attackTimeConst) * 2e-3)
     },
     stop (midiNoteNumber: number) {
       const index = this.isPressedIndexes.indexOf(midiNoteNumber)
       const ac = this.audioCtx as AudioContext
       this.isPressedIndexes.splice(index, 1)
-      this.audioNodes.get(midiNoteNumber)?.gain.gain.setTargetAtTime(0, ac.currentTime, this.releaseTimeConst * 1e-3);
-      this.audioNodes.get(midiNoteNumber)?.osc.stop(ac.currentTime + 5);
+      const audioNodes = this.audioNodes.get(midiNoteNumber)
+      const osc = audioNodes?.osc as OscillatorNode
+      const gainParam = audioNodes?.gain.gain as AudioParam
+      const tempVolume = audioNodes?.gain.gain.value as number
+      gainParam.cancelScheduledValues(ac.currentTime)
+      gainParam.setValueAtTime(tempVolume, ac.currentTime)
+      gainParam.setTargetAtTime(0, ac.currentTime, this.releaseTimeConst * 2e-3)
+      osc.stop(ac.currentTime + this.releaseTimeConst * 10e-3)
       this.audioNodes.delete(midiNoteNumber)
     },
     stopTones (midiNoteNumbers: number[]) {

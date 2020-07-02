@@ -16,7 +16,7 @@
           :style="`border: solid 1px ${dark ?'white':'#1E1E1E'}`"
           class="white-key"
           :class="[{'primary': pressedNoteNames.includes(noteName)}, dark ? 'darken-5' : 'lighten-5']"
-        ><span class="note-text">{{noteName}}</span></div>
+        ><span class="note-text">{{ displayCent ? centDifference.get(noteName) : noteName }}</span></div>
       </div>
       <div class="black-keyboard">
         <div
@@ -25,7 +25,7 @@
           :noteName="noteName"
           :style="`border: solid 1px ${dark ?'white':'#1E1E1E'}; background-color: ${dark ? '#1E1E1E' : 'white'}`"
           :class="[{'primary': pressedNoteNames.includes(noteName)}, dark ? 'darken-5' : 'lighten-5', (noteName !== '') ? 'black-key' : 'key-space']"
-        ><span class="note-text">{{noteName}}</span></div>
+        ><span class="note-text">{{ displayCent ? centDifference.get(noteName) : noteName }}</span></div>
       </div>
     </div>
   </v-card>
@@ -33,7 +33,9 @@
 
 <script lang="ts">
 import Vue, { PropType } from 'vue'
-const noteNames = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
+import { getCentDifferenceInC } from './keyboard/harmony'
+const noteNames = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'] as const
+type NoteName = typeof noteNames[number]
 const chordToNoteIndexes: Record<string, number[]> = {
   "": [0, 4, 7],
   "m": [0, 3, 7],
@@ -52,7 +54,7 @@ const chordToNoteIndexes: Record<string, number[]> = {
   "7-5": [0, 4, 6, 10],
 }
 
-function chordNameToNoteNames(chordName: string, baseNote: string): string[] {
+function chordNameToNoteNames(chordName: string, baseNote: NoteName): string[] {
   const noteIntervalSequence: number[] = (chordName in chordToNoteIndexes) ? chordToNoteIndexes[chordName] : []
   const baseIndex: number = noteNames.indexOf(baseNote)
   return (baseIndex > -1) ? noteIntervalSequence.map((noteInterval) => noteNames[(noteInterval + baseIndex) % noteNames.length]) : []
@@ -65,7 +67,8 @@ export default Vue.extend({
     blackNoteNames: ['', 'C#', 'Eb', '', '', 'F#', 'Ab', 'Bb', ''],
   }),
   props: {
-    matchChords: Array as PropType<{scaleName: string; chordName: string; isMajor: boolean}[]>,
+    matchChords: Array as PropType<{scaleName: NoteName; chordName: string; isMajor: boolean}[]>,
+    displayCent: Boolean,
     dark: Boolean
   },
   computed: {
@@ -75,6 +78,15 @@ export default Vue.extend({
     pressedNoteNames: function(): string[] {
       const topMatchChord = this.matchChords[0]
       return chordNameToNoteNames(topMatchChord.chordName, topMatchChord.scaleName)
+    },
+    centDifference: function(): Map<NoteName, number> {
+      const topMatchChord = this.matchChords[0]
+      const cents = getCentDifferenceInC(topMatchChord.scaleName, topMatchChord.isMajor)
+      const result = new Map()
+      for (const index of noteNames.keys()) {
+        result.set(noteNames[index], (Math.round(cents[index] * 10) / 10).toFixed(1))
+      }
+      return result
     }
   },
   methods: {
