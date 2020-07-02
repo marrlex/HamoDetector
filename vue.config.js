@@ -5,10 +5,13 @@ module.exports = {
   "publicPath": './',
   
   pwa: {
-    name: 'HamoDitector',
-    themeColor: '#B9F6CA',
-    msTileColor: '#4CAF50',
+    name: 'HamoDetector',
+    themeColor: '#96fac8',
+    msTileColor: '#96fac8',
     appleMobileWebAppCapable: 'yes',
-    appleMobileWebAppStatusBarStyle: 'white',
+    appleMobileWebAppStatusBarStyle: 'black-translucent',
+    manifestOptions: {
+      'background_color': '#96fac8'
+    }
   }
 }
