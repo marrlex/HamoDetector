@@ -1,6 +1,6 @@
 {
-    "name": "",
-    "short_name": "",
+    "name": "HamoDetector",
+    "short_name": "HamoDetector",
     "icons": [
         {
             "src": "/android-chrome-192x192.png",
@@ -13,7 +13,7 @@
             "type": "image/png"
         }
     ],
-    "theme_color": "#e1f5fe",
-    "background_color": "#e1f5fe",
+    "theme_color": "#96fac8",
+    "background_color": "#96fac8",
     "display": "standalone"
 }
