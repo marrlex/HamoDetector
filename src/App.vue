@@ -57,7 +57,6 @@
                 <v-slider
                   v-if="'slider' in subItem"
                   v-model="subItem.value"
-                  thumb-label
                   :min="subItem.slider.min"
                   :max="subItem.slider.max"
                   append-icon="add"
@@ -91,6 +90,7 @@
               style="max-height: 100%"
               :dark="settings.general.items.colorTheme.value"
               :matchChords="harmony"
+              :displayCent="settings.general.items.displayCent.value"
             ></harmony-display>
           </v-col>
 
@@ -151,7 +151,7 @@ import ToneColorCard from './components/ToneColorCard.vue'
 import HarmonyDisplay from './components/HarmonyDisplay.vue'
 import { chordCheck } from './components/keyboard/harmony'
 
-function storeData (key: string, data: Record<string, any>) {
+function storeData (key: string, data: Record<string, Record<string, any>>) {
   window.localStorage.setItem(key, JSON.stringify(data))
 }
 
@@ -180,6 +180,11 @@ export default Vue.extend({
           autoKeySelect: {
             title: '調の自動選択',
             value: storedGeneralSettings?.autoKeySelect?.value || true,
+            switch: true
+          },
+          displayCent: {
+            title: 'セント値を表示',
+            value: storedGeneralSettings?.displayCent?.value || false,
             switch: true
           },
           baseFrequency: {
@@ -220,7 +225,7 @@ export default Vue.extend({
         items: {
           attack: {
             title: 'アタック',
-            value: storedSettings?.ToneColor?.items?.attack?.value || 80,
+            value: storedSettings?.ToneColor?.items?.attack?.value || 50,
             slider: {
               min: 0,
               max: 100
@@ -228,7 +233,7 @@ export default Vue.extend({
           },
           release: {
             title: 'リリース',
-            value: storedSettings?.ToneColor?.items?.release?.value ||  80,
+            value: storedSettings?.ToneColor?.items?.release?.value ||  50,
             slider: {
               min: 0,
               max: 100
