@@ -34,7 +34,6 @@
 <script lang="ts">
 import Vue, { PropType } from 'vue'
 import { getCentDifferenceInC } from './keyboard/harmony'
-import { Prop } from 'vue/types/options'
 const noteNames = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'] as const
 type NoteName = typeof noteNames[number]
 const chordToNoteIndexes: Record<string, number[]> = {
@@ -83,7 +82,6 @@ export default Vue.extend({
       return chordNameToNoteNames(topMatchChord.chordName, topMatchChord.scaleName)
     },
     centDifference: function(): Map<NoteName, number> {
-      const topMatchChord = this.matchChords[0]
       const cents = getCentDifferenceInC(this.musicalKey, this.isMajor)
       const result = new Map()
       for (const index of noteNames.keys()) {
