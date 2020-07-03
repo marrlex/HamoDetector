@@ -27,7 +27,13 @@ import Vue, { PropType } from 'vue'
 import PianoKey from './PianoKey.vue'
 import { getFreqByMidiNoteNumber } from './harmony'
 const toneNames = ['A', 'Bb', 'B', 'C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab']
-//window.AudioContext = window.AudioContext  || window.webkitAudioContext;
+declare global {
+    interface Window {
+        webkitAudioContext: typeof AudioContext;
+    }
+}
+
+window.AudioContext = window.AudioContext || window.webkitAudioContext
 
 interface KeyDetailType {
   midiNoteNumber: number;
@@ -97,7 +103,7 @@ export default Vue.extend({
       osc.connect(gain)
       gain.connect(this.masterGain as GainNode)
       // ana.connect(this.audioCtx.destination)
-      osc.start()
+      osc.start(ac.currentTime)
       gain.gain.linearRampToValueAtTime(1, ac.currentTime + (100 - this.attackTimeConst) * 2e-3)
     },
     stop (midiNoteNumber: number) {
