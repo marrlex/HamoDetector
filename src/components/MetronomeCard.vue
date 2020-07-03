@@ -90,13 +90,14 @@
             <span>{{ subItem.icon || subItem.title }}</span>
           </v-col>
           <v-col>
-          <v-slider
+            <v-slider
               v-model="subItem.value"
               dense
               :min="subItem.slider.min"
               :max="subItem.slider.max"
               hide-details=""
-          ></v-slider>
+              @change="subItem.metronomeNote.volume = subItem.value"
+            ></v-slider>
           </v-col>
         </v-row>
       </v-container>
@@ -107,6 +108,32 @@
 <script lang="ts">
 import Vue from 'vue'
 import { MetronomeNote, MetronomeBeater } from './Metronome'
+interface Volume {
+  title: string;
+  icon: string;
+  value: number;
+  slider: {
+      min: number;
+      max: number;
+  };
+  metronomeNote: MetronomeNote;
+}
+
+interface Volumes {
+    stress: {
+        title: string;
+        value: number;
+        slider: {
+            min: number;
+            max: number;
+        };
+        metronomeNote: MetronomeNote;
+    };
+    quarter: Volume;
+    quaver: Volume;
+    semiquaver: Volume;
+    triplet: Volume;
+}
 
 export default Vue.extend({
   props: {
@@ -182,7 +209,7 @@ export default Vue.extend({
           max: 100
         }
       },
-    },
+    } as Volumes,
     beater: undefined as MetronomeBeater | undefined
   }),
   methods: {
@@ -227,12 +254,6 @@ export default Vue.extend({
         this.beater.tempo = tempo
       }
     },
-    volumes: {
-      handler: function (volume: {"value": number; "metronomeNote": MetronomeNote}) {
-        volume.metronomeNote.volume = volume.value
-      },
-      deep: true
-    }
   }
 })
 </script>
