@@ -66,8 +66,8 @@
               v-else
               class="ml-2 mr-2 mt-0 mb-1"
               v-model="items.timeSignature.complexValue"
-              @focus="isMobile || $emit('update:isVirtualKeyboardShown', true)"
-              @blur="isMobile || $emit('update:isVirtualKeyboardShown', false)"
+              @focus="isMobile && $emit('update:isVirtualKeyboardShown', true)"
+              @blur="isMobile && $emit('update:isVirtualKeyboardShown', false)"
               autofocus=""
               placeholder="2+3"
               suffix="/4"
