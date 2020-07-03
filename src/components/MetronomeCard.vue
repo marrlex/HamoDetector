@@ -66,6 +66,8 @@
               v-else
               class="ml-2 mr-2 mt-0 mb-1"
               v-model="items.timeSignature.complexValue"
+              @focus="isMobile || $emit('update:isVirtualKeyboardShown', true)"
+              @blur="isMobile || $emit('update:isVirtualKeyboardShown', false)"
               autofocus=""
               placeholder="2+3"
               suffix="/4"
@@ -107,6 +109,7 @@
 
 <script lang="ts">
 import Vue from 'vue'
+import { isMobile } from 'mobile-device-detect';
 import { MetronomeNote, MetronomeBeater } from './Metronome'
 interface Volume {
   title: string;
@@ -137,9 +140,11 @@ interface Volumes {
 
 export default Vue.extend({
   props: {
-    dark: Boolean
+    dark: Boolean,
+    isVirtualKeyboardShown: Boolean
   },
   data: () => ({
+    isMobile: isMobile,
     title: 'メトロノーム',
     active: false,
     isPlaying: false,

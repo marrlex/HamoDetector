@@ -112,6 +112,7 @@
           <v-col cols="12" md="6" lg="3" order="last" :style="`width: ${$vuetify.breakpoint.thresholds.md}`">
             <metronome-card
               :dark="settings.general.items.colorTheme.value"
+              :isVirtualKeyboardShown.sync="isVirtualKeyboardShown"
               style="max-height: 100%"
             ></metronome-card>
           </v-col>
@@ -120,6 +121,7 @@
     </v-main>
 
     <v-footer
+      v-if="!isVirtualKeyboardShown"
       style="height: 40%; max-height: 50mm"
       padless=""
       app
@@ -293,7 +295,8 @@ export default Vue.extend({
     harmony: [{
       chordName: "",
       scaleName: "",
-    }]
+    }],
+    isVirtualKeyboardShown: false
   }),
 
   watch: {
