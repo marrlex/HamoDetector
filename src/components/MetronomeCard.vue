@@ -249,6 +249,12 @@ export default Vue.extend({
         this.beater.timeSignatureNumerator = timeSignatureNumerator
       }
     },
+    'items.timeSignature.complexValue': function () {
+      const timeSignatureNumerator = (this.items.timeSignature.complexValue || "2+3").split(/[^\d]/).map((str) => Number(str))
+      if (this.isPlaying && this.beater !== undefined) {
+        this.beater.timeSignatureNumerator = timeSignatureNumerator.filter(Boolean)
+      }
+    },
     'items.tempo.value': function (tempo: number) {
       if (this.beater !== undefined) {
         this.beater.tempo = tempo
