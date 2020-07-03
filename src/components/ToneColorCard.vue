@@ -36,7 +36,7 @@
           :value="toneRange"
           @change="$emit('update:toneRange', $event)"
           min="0"
-          max="3"
+          :max="toneRanges.items.length - 1"
           step="1"
           ticks="always"
           :tick-labels="toneRanges.items"
@@ -99,11 +99,13 @@
   </v-card>
 </template>
 
-<script>
-export default {
+<script lang="ts">
+import Vue, { PropType } from 'vue'
+
+export default Vue.extend({
   props: {
     waveform: String,
-    sustainMethod: String,
+    sustainMethod: String as PropType<"momentary" | "exclusive" | "alternative">,
     toneRange: Number,
     isMajor: Boolean,
     musicalKey: String,
@@ -147,10 +149,10 @@ export default {
     },
     toneRanges: {
       value: 2,
-      items: ["低1", "低2", "中", "高"]
+      items: ["低1", "低2", "中", "高1", "高2"]
     }
   })
-}
+})
 </script>
 
 <style>
