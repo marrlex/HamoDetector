@@ -27,10 +27,11 @@ export class MetronomeNote {
     init() {
         this.osc = this.ctx.createOscillator()
         this.gain = this.ctx.createGain()
-        this.masterGain.gain.setValueAtTime(0.1, this.ctx.currentTime)
+        this.masterGain = this.ctx.createGain()
 
         this.osc.frequency.value = this.frequency
         this.gain.gain.value = this._volume
+        this.masterGain.gain.value = 0.1
         this.osc.connect(this.gain)
         this.gain.connect(this.masterGain)
         this.masterGain.connect(this.ctx.destination)
