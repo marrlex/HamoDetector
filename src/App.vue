@@ -90,6 +90,8 @@
               style="max-height: 100%"
               :dark="settings.general.items.colorTheme.value"
               :matchChords="harmony"
+              :isMajor="toneConfig.isMajor"
+              :musicalKey="toneConfig.musicalKey"
               :displayCent="settings.general.items.displayCent.value"
             ></harmony-display>
           </v-col>
@@ -151,7 +153,7 @@ import ToneColorCard from './components/ToneColorCard.vue'
 import HarmonyDisplay from './components/HarmonyDisplay.vue'
 import { chordCheck } from './components/keyboard/harmony'
 
-function storeData (key: string, data: Record<string, Record<string, any>>) {
+function storeData (key: string, data: Record<string, any>) {
   window.localStorage.setItem(key, JSON.stringify(data))
 }
 
@@ -245,7 +247,7 @@ export default Vue.extend({
     playingMidiNoteNumbers: [],
     toneConfig: {
       waveform: storedToneConfig?.waveform || "sine",
-      sustainMethod: storedToneConfig?.sustainMethod || "momentary",
+      sustainMethod: (storedToneConfig?.sustainMethod || "momentary") as "momentary" | "exclusive" | "alternative",
       isMajor: (storedToneConfig?.isMajor != null) ? storedToneConfig?.isMajor : true,
       musicalKey: storedToneConfig?.musicalKey || "平均律",
       toneRange: storedToneConfig?.toneRange || 2,
