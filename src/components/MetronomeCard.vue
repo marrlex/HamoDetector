@@ -80,7 +80,7 @@
         <v-divider></v-divider>
         <v-card-subtitle class="pl-0">音量</v-card-subtitle>
         <v-row
-          v-for="(subItem, key) in volumes"
+          v-for="subItem in volumes"
           :key="subItem.title"
           no-gutters
           justify="space-between"
@@ -96,7 +96,6 @@
               :min="subItem.slider.min"
               :max="subItem.slider.max"
               hide-details=""
-              @change="changeVolume(key)"
           ></v-slider>
           </v-col>
         </v-row>
@@ -105,10 +104,11 @@
   </v-card>
 </template>
 
-<script>
-import { MetronomeNote, MetronomeBeater } from './Metronome.ts'
-export default {
-  name: "MetronomeCard",
+<script lang="ts">
+import Vue from 'vue'
+import { MetronomeNote, MetronomeBeater } from './Metronome'
+
+export default Vue.extend({
   props: {
     dark: Boolean
   },
@@ -183,7 +183,7 @@ export default {
         }
       },
     },
-    beater: null
+    beater: undefined as MetronomeBeater | undefined
   }),
   methods: {
     metroHandler() {
@@ -203,39 +203,38 @@ export default {
         triplet: this.volumes.triplet.metronomeNote,
       })
       const timeSignatureValue = this.items.timeSignature.value
-      const timeSignatureNumerator = Number.isInteger(timeSignatureValue) ? [timeSignatureValue] : (this.items.timeSignature.complexValue || "2+3").split(/[^\d]/).map((str) => Number(str))
+      const timeSignatureNumerator = Number.isInteger(timeSignatureValue) 
+        ? [timeSignatureValue] 
+        : (this.items.timeSignature.complexValue || "2+3").split(/[^\d]/).map((str) => Number(str))
       this.beater.start(this.items.tempo.value, timeSignatureNumerator)
     },
     stop() {
-      this.beater.stop()
-    },
-    changeTempo(operator) {
-      if (operator) {
-        switch(operator) {
-          case 'increment':
-            this.items.tempo.value++
-            break
-          case 'decrement':
-            this.items.tempo.value--
-        }
-      }
-      this.beater.tempo = this.items.tempo.value
-    },
-    changeVolume(key) {
-      this.volumes[key].metronomeNote.volume = this.volumes[key].value
+      this.beater && this.beater.stop()
     },
   },
   watch: {
     'items.timeSignature.value': function () {
       const timeSignatureValue = this.items.timeSignature.value
-      const timeSignatureNumerator = Number.isInteger(timeSignatureValue) ? [timeSignatureValue] : (this.items.timeSignature.complexValue || "2+3").split(/[^\d]/).map((str) => Number(str))
-      this.isPlaying && (this.beater.timeSignatureNumerator = timeSignatureNumerator)
+      const timeSignatureNumerator = Number.isInteger(timeSignatureValue) 
+        ? [timeSignatureValue] 
+        : (this.items.timeSignature.complexValue || "2+3").split(/[^\d]/).map((str) => Number(str))
+      if (this.isPlaying && this.beater !== undefined) {
+        this.beater.timeSignatureNumerator = timeSignatureNumerator
+      }
     },
-    'items.tempo.value': function () {
-      this.beater.tempo = this.items.tempo.value
+    'items.tempo.value': function (tempo: number) {
+      if (this.beater !== undefined) {
+        this.beater.tempo = tempo
+      }
     },
+    volumes: {
+      handler: function (volume: {"value": number; "metronomeNote": MetronomeNote}) {
+        volume.metronomeNote.volume = volume.value
+      },
+      deep: true
+    }
   }
-}
+})
 </script>
 
 <style>

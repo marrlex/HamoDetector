@@ -4,7 +4,7 @@ declare global {
     }
 }
 
-window.AudioContext = window.AudioContext || window.webkitAudioContext;
+window.AudioContext = window.AudioContext || window.webkitAudioContext
 
 export class MetronomeNote {
     beatInterval: number
@@ -13,6 +13,7 @@ export class MetronomeNote {
     ctx: AudioContext
     osc: OscillatorNode
     gain: GainNode
+    masterGain: GainNode
 
     constructor(beatInterval: number, volume: number, freq: number) {
         this.beatInterval = beatInterval
@@ -21,16 +22,19 @@ export class MetronomeNote {
         this.ctx = new AudioContext()
         this.osc = this.ctx.createOscillator()
         this.gain = this.ctx.createGain()
+        this.masterGain = this.ctx.createGain()
     }
     init() {
         this.osc = this.ctx.createOscillator()
         this.gain = this.ctx.createGain()
+        this.masterGain.gain.setValueAtTime(0.1, this.ctx.currentTime)
 
         this.osc.frequency.value = this.frequency
         this.gain.gain.value = this._volume
         this.osc.connect(this.gain)
-        this.gain.connect(this.ctx.destination)
-        this.osc.start()
+        this.gain.connect(this.masterGain)
+        this.masterGain.connect(this.ctx.destination)
+        this.osc.start(this.ctx.currentTime)
     }
     reserveBeat(current48Beat: number, nextBeatTime: number, currentTimeSignature: number) {
         if (this.beatInterval) {
@@ -54,7 +58,7 @@ export class MetronomeNote {
 
 export class MetronomeBeater {
     ctx: AudioContext
-    metronomeNotes: MetronomeNote[]
+    metronomeNotes: Record<string, MetronomeNote>
     tempo: number
     currentTimeSignature: number
     current48Beat: number
@@ -67,7 +71,7 @@ export class MetronomeBeater {
     signature: number[]
 
 
-    constructor (metronomeNotes: MetronomeNote[]) {
+    constructor (metronomeNotes: Record<string, MetronomeNote>) {
         this.ctx = new AudioContext()
         this.metronomeNotes = metronomeNotes
         this.currentTimeSignature = 0
