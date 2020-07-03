@@ -59,7 +59,7 @@ export default Vue.extend({
     musicalKey: String,
     stdFrequency: Number,
     isPressedIndexes: Array as PropType<number[]>,
-    sustainMethod: String,
+    sustainMethod: String as PropType<"momentary" | "exclusive" | "alternative">,
   },
   components: {
     'piano-key': PianoKey
@@ -103,24 +103,20 @@ export default Vue.extend({
     stop (midiNoteNumber: number) {
       const index = this.isPressedIndexes.indexOf(midiNoteNumber)
       const ac = this.audioCtx as AudioContext
-      this.isPressedIndexes.splice(index, 1)
       const audioNodes = this.audioNodes.get(midiNoteNumber)
       const osc = audioNodes?.osc as OscillatorNode
       const gainParam = audioNodes?.gain.gain as AudioParam
       const tempVolume = audioNodes?.gain.gain.value as number
+      this.isPressedIndexes.splice(index, 1)
       gainParam.cancelScheduledValues(ac.currentTime)
       gainParam.setValueAtTime(tempVolume, ac.currentTime)
       gainParam.setTargetAtTime(0, ac.currentTime, this.releaseTimeConst * 2e-3)
       osc.stop(ac.currentTime + this.releaseTimeConst * 10e-3)
       this.audioNodes.delete(midiNoteNumber)
     },
-    stopTones (midiNoteNumbers: number[]) {
-      for (const midiNoteNumber of midiNoteNumbers) {
-        if (this.startMidiNoteNumber <= midiNoteNumber && midiNoteNumber <= this.startMidiNoteNumber + this.interval) this.stop(midiNoteNumber)
-      }
-    },
     clear () {
-      for (const midiNoteNumber of this.audioNodes.keys()) {
+      const pressedIndexes = [...this.isPressedIndexes]
+      for (const midiNoteNumber of pressedIndexes) {
         this.stop(midiNoteNumber)
       }
       if (this.audioCtx !== undefined && this.audioCtx.state !== "running") {
@@ -219,7 +215,6 @@ export default Vue.extend({
             this.stop(pressedKey)
             break
           case "alternative":
-            console.log(this.willStopMidiNoteNumbers.get(0))
             if (this.willStopMidiNoteNumbers.has(0)) {
               this.stop(this.willStopMidiNoteNumbers.get(0) as number)
               this.willStopMidiNoteNumbers.delete(0)

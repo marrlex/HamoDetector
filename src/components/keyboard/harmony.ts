@@ -97,7 +97,7 @@ export function getFreqByMidiNoteNumber({
         const currentFreqRatio = freqRatio.get(isMajor ? "major" : "minor") as number[]
         const referBaseFreq = baseFreq * (2 ** (scaleKeyNumber / octaveInterval))
         const referWishFreq = referBaseFreq * currentFreqRatio[degree]
-        const octave = Math.floor((midiNoteNumber - midiNoteNumberOfA0 - scaleKeyNumber) / octaveInterval) + 1
+        const octave = Math.floor((midiNoteNumber - midiNoteNumberOfA0 - scaleKeyNumber) / octaveInterval)
         return referWishFreq * (2 ** octave)
     }
 }
