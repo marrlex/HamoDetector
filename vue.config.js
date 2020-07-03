@@ -12,6 +12,9 @@ module.exports = {
     appleMobileWebAppStatusBarStyle: 'black-translucent',
     manifestOptions: {
       'background_color': '#96fac8'
+    },
+    iconPaths: {
+      appleTouchIcon: 'img/icons/apple-touch-icon.png',
     }
   }
 }
