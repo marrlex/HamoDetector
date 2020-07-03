@@ -152,15 +152,53 @@ import MetronomeCard from './components/MetronomeCard.vue'
 import ToneColorCard from './components/ToneColorCard.vue'
 import HarmonyDisplay from './components/HarmonyDisplay.vue'
 import { chordCheck } from './components/keyboard/harmony'
+interface SwitchSetting {
+  title: string;
+  value: boolean;
+  switch: boolean;
+}
+interface SliderSetting {
+  title: string;
+  value: number;
+  slider: {
+    min: number;
+    max: number;
+  };
+}
+interface GeneralSettings {
+  title: string;
+  active: boolean;
+  items: {
+    autoKeySelect: SwitchSetting;
+    displayCent: SwitchSetting;
+    baseFrequency: SliderSetting;
+    colorTheme: SwitchSetting;
+  };
+}
+interface ToneColorSettings {
+  title: string;
+  active: boolean;
+  items: {
+    attack: SliderSetting;
+    release: SliderSetting;
+  };
+}
+interface ToneConfig {
+  waveform: OscillatorType;
+  sustainMethod: "momentary" | "exclusive" | "alternative";
+  isMajor: boolean;
+  musicalKey: string;
+  toneRange: number;
+}
 
-function storeData (key: string, data: Record<string, any>) {
+
+function storeData (key: string, data: GeneralSettings | ToneColorSettings | ToneConfig) {
   window.localStorage.setItem(key, JSON.stringify(data))
 }
 
-const storedSettings = JSON.parse(window.localStorage.getItem("settings") as string)
-const storedToneConfig = JSON.parse(window.localStorage.getItem("toneConfig") as string)
-
-const storedGeneralSettings = storedSettings?.general?.items
+const storedGeneralSettings: GeneralSettings | undefined = JSON.parse(window.localStorage.getItem("settings") as string)
+const storedToneColorSettings: ToneColorSettings | undefined = JSON.parse(window.localStorage.getItem("settings") as string)
+const storedToneConfig: ToneConfig | undefined = JSON.parse(window.localStorage.getItem("toneConfig") as string)
 
 export default Vue.extend({
   name: 'App',
@@ -181,17 +219,17 @@ export default Vue.extend({
         items: {
           autoKeySelect: {
             title: '調の自動選択',
-            value: storedGeneralSettings?.autoKeySelect?.value || true,
+            value: storedGeneralSettings?.items?.autoKeySelect?.value || true,
             switch: true
           },
           displayCent: {
             title: 'セント値を表示',
-            value: storedGeneralSettings?.displayCent?.value || false,
+            value: storedGeneralSettings?.items?.displayCent?.value || false,
             switch: true
           },
           baseFrequency: {
             title: '基本周波数',
-            value: storedGeneralSettings?.baseFrequency?.value || 442,
+            value: storedGeneralSettings?.items?.baseFrequency?.value || 442,
             slider: {
               min: 435,
               max: 445
@@ -209,7 +247,7 @@ export default Vue.extend({
           */
           colorTheme: {
             title: 'ダークモード',
-            value: storedGeneralSettings?.colorTheme?.value || false,
+            value: storedGeneralSettings?.items?.colorTheme?.value || false,
             switch: true
             /*
             select: [
@@ -220,14 +258,14 @@ export default Vue.extend({
             */
           },
         },
-      },
+      } as GeneralSettings,
       toneColor: {
         title: '音形',
         active: false,
         items: {
           attack: {
             title: 'アタック',
-            value: storedSettings?.ToneColor?.items?.attack?.value || 50,
+            value: storedToneColorSettings?.items?.attack?.value || 50,
             slider: {
               min: 0,
               max: 100
@@ -235,14 +273,14 @@ export default Vue.extend({
           },
           release: {
             title: 'リリース',
-            value: storedSettings?.ToneColor?.items?.release?.value ||  50,
+            value: storedToneColorSettings?.items?.release?.value ||  50,
             slider: {
               min: 0,
               max: 100
             }
           },
         },
-      },
+      } as ToneColorSettings,
     },
     playingMidiNoteNumbers: [],
     toneConfig: {
@@ -251,7 +289,7 @@ export default Vue.extend({
       isMajor: (storedToneConfig?.isMajor != null) ? storedToneConfig?.isMajor : true,
       musicalKey: storedToneConfig?.musicalKey || "平均律",
       toneRange: storedToneConfig?.toneRange || 2,
-    },
+    } as ToneConfig,
     harmony: [{
       chordName: "",
       scaleName: "",
@@ -269,15 +307,21 @@ export default Vue.extend({
         }
       }
     },
-    settings: {
-      handler: function () {
-        storeData("settings", this.settings)
+    "settings.general": {
+      handler: function (setting: GeneralSettings) {
+        storeData(setting.title, setting)
+      },
+      deep: true,
+    },
+    "settings.toneColor": {
+      handler: function (setting: ToneColorSettings) {
+        storeData(setting.title, setting)
       },
       deep: true,
     },
     toneConfig: {
-      handler: function () {
-        storeData("toneConfig", this.toneConfig)
+      handler: function (toneConfig: ToneConfig) {
+        storeData("toneConfig", toneConfig)
       },
       deep: true,
     }
