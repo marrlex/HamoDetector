@@ -10,42 +10,40 @@ export class MetronomeNote {
     beatInterval: number
     _volume: number
     frequency: number
-    ctx: AudioContext
-    osc: OscillatorNode
-    gain: GainNode
-    masterGain: GainNode
+    ctx: AudioContext | undefined
+    osc: OscillatorNode | undefined
+    gain: GainNode | undefined
+    masterGain: GainNode | undefined
 
     constructor(beatInterval: number, volume: number, freq: number) {
         this.beatInterval = beatInterval
         this._volume = volume / 100
         this.frequency = freq
-        this.ctx = new AudioContext()
-        this.osc = this.ctx.createOscillator()
-        this.gain = this.ctx.createGain()
-        this.masterGain = this.ctx.createGain()
     }
     init() {
-        this.osc = this.ctx.createOscillator()
-        this.gain = this.ctx.createGain()
-        this.masterGain = this.ctx.createGain()
+        const ac = this.ctx as AudioContext
+        this.osc = ac.createOscillator()
+        this.gain = ac.createGain()
+        this.masterGain = ac.createGain()
 
         this.osc.frequency.value = this.frequency
         this.gain.gain.value = this._volume
         this.masterGain.gain.value = 0.1
         this.osc.connect(this.gain)
         this.gain.connect(this.masterGain)
-        this.masterGain.connect(this.ctx.destination)
-        this.osc.start(this.ctx.currentTime)
+        this.masterGain.connect(ac.destination)
+        this.osc.start(ac.currentTime)
     }
     reserveBeat(current48Beat: number, nextBeatTime: number, currentTimeSignature: number) {
+        const gain = this.gain as GainNode
         if (this.beatInterval) {
             if (current48Beat % this.beatInterval === 0) {
-                this.gain.gain.setValueAtTime(this._volume, nextBeatTime)
-                this.gain.gain.linearRampToValueAtTime(0, nextBeatTime + 0.05)
+                gain.gain.setValueAtTime(this._volume, nextBeatTime)
+                gain.gain.linearRampToValueAtTime(0, nextBeatTime + 0.05)
             }
         } else if (!currentTimeSignature && !current48Beat) {
-            this.gain.gain.setValueAtTime(this._volume, nextBeatTime)
-            this.gain.gain.linearRampToValueAtTime(0, nextBeatTime + 0.05);   
+            gain.gain.setValueAtTime(this._volume, nextBeatTime)
+            gain.gain.linearRampToValueAtTime(0, nextBeatTime + 0.05);   
         }
     }
     set audioContext(ctx: AudioContext) {

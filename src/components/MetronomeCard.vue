@@ -123,19 +123,19 @@ interface Volume {
 }
 
 interface Volumes {
-    stress: {
-        title: string;
-        value: number;
-        slider: {
-            min: number;
-            max: number;
-        };
-        metronomeNote: MetronomeNote;
+  stress: {
+    title: string;
+    value: number;
+    slider: {
+      min: number;
+      max: number;
     };
-    quarter: Volume;
-    quaver: Volume;
-    semiquaver: Volume;
-    triplet: Volume;
+    metronomeNote: MetronomeNote;
+  };
+  quarter: Volume;
+  quaver: Volume;
+  semiquaver: Volume;
+  triplet: Volume;
 }
 
 export default Vue.extend({
