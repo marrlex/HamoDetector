@@ -1,12 +1,36 @@
 <template>
   <v-app>
+    <v-navigation-drawer
+      clipped
+      app
+      temporary=""
+      v-model="navBar"
+    >
+      <v-list>
+        <v-list-item 
+          v-for="item in drawerItems"
+          :key="item.title"
+          :dark="settings.general.items.colorTheme.value"
+          @click="$router.push(item.to)"
+        >
+          <v-list-item-icon>
+            <v-icon v-text="item.icon"></v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title v-text="item.title"></v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+      </v-list>
+    </v-navigation-drawer>
+
     <v-app-bar
       dense=""
       :dark="settings.general.items.colorTheme.value"
       app
       width="100vw"
     >
-      <v-toolbar-title>鱧ディテクター</v-toolbar-title>
+      <v-app-bar-nav-icon @click.stop="navBar = !navBar"></v-app-bar-nav-icon>
+      <v-toolbar-title>アンミー</v-toolbar-title>
       <v-spacer></v-spacer>
       <v-btn :dark="settings.general.items.colorTheme.value" icon @click.stop="drawer = !drawer">
         <v-icon>settings</v-icon>
@@ -20,13 +44,9 @@
       app
       :dark="settings.general.items.colorTheme.value"
     >
-      <v-list-item :dark="settings.general.items.colorTheme.value">
-        <v-list-item-content>
-          <v-list-item-title class="text-subtitle-1">設定</v-list-item-title>
-        </v-list-item-content>
-      </v-list-item>
 
       <v-list dense :dark="settings.general.items.colorTheme.value">
+        <v-subheader class="text-subtitle-1">設定</v-subheader>
         <v-list-group
           v-for="item in settings"
           :key="item.title"
@@ -84,76 +104,18 @@
 
     <v-main style="height: 100vh">
       <v-container fluid style="height: 100%" class="overflow-y-auto">
-        <v-row wrap dense>
-          <v-col cols="12" md="12" lg="6" order-lg="4" order-xl="4" order-sm="first" order-md="first" :style="`width: ${$vuetify.breakpoint.thresholds.md}`">
-            <harmony-display
-              style="max-height: 100%"
-              :dark="settings.general.items.colorTheme.value"
-              :matchChords="harmony"
-              :isMajor="toneConfig.isMajor"
-              :musicalKey="toneConfig.musicalKey"
-              :displayCent="settings.general.items.displayCent.value"
-            ></harmony-display>
-          </v-col>
-
-          <v-col cols="12" md="6" lg="3" order-lg="first" order-xl="first" order-sm="7" order-md="7" :style="`width: ${$vuetify.breakpoint.thresholds.md}`">
-            <tonecolor-card
-              style="max-height: 100%"
-              :dark="settings.general.items.colorTheme.value"
-              :waveform.sync="toneConfig.waveform"
-              :sustainMethod.sync="toneConfig.sustainMethod"
-              :toneRange.sync="toneConfig.toneRange"
-              :isMajor.sync="toneConfig.isMajor"
-              :musicalKey.sync="toneConfig.musicalKey"
-            ></tonecolor-card>
-          </v-col>
-          
-
-          <v-col cols="12" md="6" lg="3" order="last" :style="`width: ${$vuetify.breakpoint.thresholds.md}`">
-            <metronome-card
-              :dark="settings.general.items.colorTheme.value"
-              :isVirtualKeyboardShown.sync="isVirtualKeyboardShown"
-              style="max-height: 100%"
-            ></metronome-card>
-          </v-col>
-        </v-row>
+        <router-view></router-view>
       </v-container>
     </v-main>
-
-    <v-footer
-      v-if="!isVirtualKeyboardShown"
-      style="height: 40%; max-height: 50mm"
-      padless=""
-      app
-    >
-      <v-container fluid class="ma-0" style="height: 100%; width: 100vw">
-        <piano-keyboard
-          :startMidiNoteNumber="toneConfig.toneRange * 12 + 24"
-          :interval="$vuetify.breakpoint.xs ? 13 : $vuetify.breakpoint.mdAndDown ? 25 : $vuetify.breakpoint.lg ? 37 : 49"
-          :isPressedIndexes="playingMidiNoteNumbers"
-          :sustainMethod="toneConfig.sustainMethod"
-          :wavetype="toneConfig.waveform"
-          :attackTimeConst="settings.toneColor.items.attack.value"
-          :releaseTimeConst="settings.toneColor.items.release.value"
-          :isMajor="toneConfig.isMajor"
-          :musicalKey="toneConfig.musicalKey"
-          :stdFrequency="settings.general.items.baseFrequency.value"
-        ></piano-keyboard>
-      </v-container>
-    </v-footer>
   </v-app>
 </template>
 
 <script lang="ts">
 import Vue from 'vue'
 import '@mdi/font/css/materialdesignicons.css'
-import './assets/fonts/css/musisync.css'
+import '@/assets/fonts/css/musisync.css'
 import 'material-design-icons-iconfont/dist/material-design-icons.css'
-import PianoKeyboard from './components/keyboard/Keyboard.vue'
-import MetronomeCard from './components/MetronomeCard.vue'
-import ToneColorCard from './components/ToneColorCard.vue'
-import HarmonyDisplay from './components/HarmonyDisplay.vue'
-import { chordCheck } from './components/keyboard/harmony'
+import { chordCheck } from '@/plugins/harmony'
 interface SwitchSetting {
   title: string;
   value: boolean;
@@ -204,16 +166,26 @@ const storedToneConfig: ToneConfig | undefined = JSON.parse(window.localStorage.
 
 export default Vue.extend({
   name: 'App',
-
-  components: {
-    'piano-keyboard': PianoKeyboard,
-    'metronome-card': MetronomeCard,
-    'tonecolor-card': ToneColorCard,
-    'harmony-display': HarmonyDisplay,
-  },
-
   data: () => ({
-    drawer: null,
+    drawer: false,
+    drawerItems: {
+      harmony: {
+        title: "ハーモニー",
+        to: "/",
+        icon: "mdi-piano"
+      },
+      learning: {
+        title: "純正律について",
+        to: "/learning",
+        icon: "mdi-music-circle-outline"
+      },
+      about: {
+        title: "このアプリについて",
+        to: "/about",
+        icon: "mdi-information-outline"
+      }
+    },
+    navBar: false,
     settings: {
       general: {
         title: '一般',
@@ -296,7 +268,8 @@ export default Vue.extend({
       chordName: "",
       scaleName: "",
     }],
-    isVirtualKeyboardShown: false
+    isVirtualKeyboardShown: false,
+    analyser: undefined,
   }),
 
   watch: {
