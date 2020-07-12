@@ -6,8 +6,9 @@
       @mousedown="pressKey"
       @mouseup="releaseKey"
       @mouseleave="releaseKey"
-      @touchmove.stop="moveKey"
-      @touchend.prevent="releaseKey"
+      @touchstart.prevent="pressKey"
+      @touchmove="moveKey"
+      @touchend="releaseKey"
       @touchcancel="releaseKey"
     >
       <piano-key
@@ -24,7 +25,7 @@
 <script lang="ts">
 import Vue, { PropType } from 'vue'
 import PianoKey from './PianoKey.vue'
-import { HarmonyPlayer, NoteName } from './HarmonyPlayer'
+import { HarmonyPlayer, NoteName } from '@/plugins/HarmonyPlayer'
 
 interface KeyDetailType {
   midiNoteNumber: number;
@@ -58,6 +59,7 @@ export default Vue.extend({
     stdFrequency: Number,
     isPressedIndexes: Array as PropType<number[]>,
     sustainMethod: String as PropType<"momentary" | "exclusive" | "alternative">,
+    analyser: AnalyserNode,
   },
   components: {
     'piano-key': PianoKey
@@ -77,21 +79,12 @@ export default Vue.extend({
   },
   */
   methods: {
-    initializeAudioContext() {
-      if (this.audioCtx === undefined || this.audioCtx.state !== "running") {
-        this.audioCtx = new AudioContext()
-        this.masterGain = this.audioCtx.createGain()
-        this.masterGain.gain.value = 0.1
-        this.masterGain.connect(this.audioCtx.destination)
-        this.comp = this.audioCtx.createDynamicsCompressor()
-        this.comp.attack.value = 0;
-        this.comp.release.value = 0;
-        this.comp.connect(this.masterGain)
-      }
-    },
     play (midiNoteNumber: number) {
       this.harmonyPlayer?.play(midiNoteNumber)
       this.isPressedIndexes.push(midiNoteNumber)
+      if (this.analyser === undefined && this.harmonyPlayer !== undefined) {
+        this.$emit('update:analyser', this.harmonyPlayer.ana)
+      }
     },
     stop (midiNoteNumber: number) {
       this.harmonyPlayer?.stop(midiNoteNumber)
@@ -110,7 +103,7 @@ export default Vue.extend({
     },
     pressKey (event: MouseEvent | TouchEvent) {
       if (this.harmonyPlayer === undefined) {
-        const toneData = {
+        const harmonyData = {
           attackTimeConst: this.attackTimeConst,
           releaseTimeConst: this.releaseTimeConst,
           isMajor: this.isMajor,
@@ -118,7 +111,7 @@ export default Vue.extend({
           musicalKey: this.musicalKey,
           wavetype: this.wavetype
         }
-        this.harmonyPlayer = new HarmonyPlayer(toneData)
+        this.harmonyPlayer = new HarmonyPlayer(harmonyData)
       }
       const targetElement = event.target as HTMLDivElement
       const midiNoteNumberAttr = targetElement.attributes.getNamedItem('midiNoteNumber')
@@ -221,19 +214,27 @@ export default Vue.extend({
   },
   watch: {
     sustainMethod: function () {
-      if (this.sustainMethod === "momentary") this.harmonyPlayer?.clear()
+      if (this.sustainMethod === "momentary") this.clear()
     },
-    musicalKey: function () {
-      this.harmonyPlayer?.replay()
+    musicalKey: function (val: NoteName) {
+      if (this.harmonyPlayer !== undefined) {
+        this.harmonyPlayer.musicalKey = val
+      }
     },
-    isMajor: function () {
-      this.harmonyPlayer?.replay()
+    isMajor: function (val) {
+      if (this.harmonyPlayer !== undefined) {
+        this.harmonyPlayer.isMajor = val
+      }
     },
-    wavetype: function () {
-      this.harmonyPlayer?.replay()
+    wavetype: function (val: OscillatorType) {
+      if (this.harmonyPlayer !== undefined) {
+        this.harmonyPlayer.wavetype = val
+      }
     },
-    stdFrequency: function () {
-      this.harmonyPlayer?.replay()
+    stdFrequency: function (val: number) {
+      if (this.harmonyPlayer !== undefined) {
+        this.harmonyPlayer.stdFreq = val
+      }
     }
   },
 })
