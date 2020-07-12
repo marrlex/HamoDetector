@@ -5,7 +5,7 @@ module.exports = {
   "publicPath": './',
   
   pwa: {
-    name: 'HamoDetector',
+    name: 'Anmy',
     themeColor: '#96fac8',
     msTileColor: '#96fac8',
     appleMobileWebAppCapable: 'yes',
