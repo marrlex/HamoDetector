@@ -110,7 +110,7 @@
 <script lang="ts">
 import Vue from 'vue'
 import { isMobile } from 'mobile-device-detect';
-import { MetronomeNote, MetronomeBeater } from './Metronome'
+import { MetronomeNote, MetronomeBeater } from '@/plugins/Metronome'
 interface Volume {
   title: string;
   icon: string;
