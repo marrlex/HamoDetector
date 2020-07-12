@@ -33,7 +33,7 @@
 
 <script lang="ts">
 import Vue, { PropType } from 'vue'
-import { getCentDifferenceInC } from './keyboard/harmony'
+import { getCentDifferenceInC } from '@/plugins/harmony'
 const noteNames = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'] as const
 type NoteName = typeof noteNames[number]
 const chordToNoteIndexes: Record<string, number[]> = {
