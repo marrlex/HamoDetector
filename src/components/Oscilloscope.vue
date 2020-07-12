@@ -1,5 +1,5 @@
 <template>
-  <v-card id="harmony-display-card" :dark="dark" height="8rem">
+  <v-card id="harmony-display-card" :dark="dark" height="9rem">
     <v-container fluid="" class="pa-0">
       <v-row style="height: 5rem; width: 100%" no-gutters="">
         <v-col style="height: 100%" cols="12">
@@ -11,7 +11,7 @@
           ></canvas>
         </v-col>
       </v-row>
-      <v-row style="height: 3rem" no-gutters="" align="center" align-content="center" justify="center">
+      <v-row style="height: 4rem" no-gutters="" align="center" align-content="center" justify="center">
         <v-col cols="1" align-self="center">
           <div style="width: 100%; text-align: center">
             <v-btn
